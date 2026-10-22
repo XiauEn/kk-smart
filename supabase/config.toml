@@ -1,0 +1,4 @@
+project_id = "kk-smart"
+[functions.kk-api]
+verify_jwt = false
+# kk-api validates every bearer token with auth.getUser before any data access.

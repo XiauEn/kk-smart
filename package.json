@@ -1,0 +1,43 @@
+{
+  "name": "kk-smart",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n student,gate,management -c cyan,green,blue \"npm run dev -w @kk/student-portal\" \"npm run dev -w @kk/gate-scanner\" \"npm run dev -w @kk/management-dashboard\"",
+    "build": "npm run typecheck && npm run build --workspaces --if-present",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "provision": "node scripts/provision.mjs",
+    "verify:connected": "node scripts/verify-connected.mjs",
+    "format": "prettier --write apps packages tests scripts docs README.md package.json tsconfig.json"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "@zxing/browser": "^0.1.5",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^3.1.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
