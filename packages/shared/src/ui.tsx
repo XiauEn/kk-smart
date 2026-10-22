@@ -56,6 +56,7 @@ export function Pagination({
             Page{" "}
             <input
               aria-label="Page number"
+              title="Enter a page number and press Enter"
               type="number"
               inputMode="numeric"
               min={1}
@@ -68,9 +69,6 @@ export function Pagination({
             />
           </label>
           <span>of {pages}</span>
-          <button className="button small" disabled={!total}>
-            Go
-          </button>
         </form>
         <button
           className="button small"

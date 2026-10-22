@@ -2695,24 +2695,34 @@ td.mono {
 .page-jump,
 .page-jump label {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
 }
 .page-jump {
   margin: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  font-size: 12px;
 }
 .page-jump input {
-  width: 68px;
-  padding: 8px;
+  width: 52px;
+  height: 34px;
+  padding: 6px;
+  text-align: center;
   border: 1px solid #dce5e1;
   border-radius: 7px;
   background: white;
   font: inherit;
 }
 .pagination-controls {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+}
+.pagination-controls .button {
+  height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 @media (max-width: 600px) {
   .table-pagination {
