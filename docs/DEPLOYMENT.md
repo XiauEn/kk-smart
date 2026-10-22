@@ -1,27 +1,13 @@
-# Deployment progress
+# Deployment verification — 22 October 2026
 
-## Confirmed on 22 October 2026
+The dedicated private repository is https://github.com/XiauEn/kk-smart. The dedicated Supabase project is `yzqggrnkkynwpjomqopn` in TEF Case Study, Singapore. Only fictional data is used.
 
-- Clean installation with `npm ci` completed.
-- All 27 automated tests passed, including the embedded PostgreSQL migrations, seed and RLS checks.
-- All three production builds passed.
-- Created the dedicated **private** GitHub repository `XiauEn/kk-smart` with the user's authorisation. No unrelated repository was modified.
-- Corrected offline QR display to retain an issued credential only until its original expiry; reconnecting resumes issuance without extending that credential.
-- Corrected connected offline simulation to retain its synthetic failure history across scans.
-- Added `npm run verify:connected` for an operator-run hosted API rehearsal once Supabase is provisioned. It checks student issuance, gate verification, shared management events, replay/expiry, denial scenarios, permission changes with restoration, and alerts. It never prints credentials.
+All four migrations are applied. The database contains 200 students and six blocks, deterministic activity and holiday declarations. Six fictional Auth accounts are provisioned. `kk-api` is active; the one-time provisioning endpoint has been retired and verified to return HTTP 410. Demo controls are enabled server-side for authorised gate terminals.
 
-## Pending account access
+Hosted API verification passed: all six account logins, short-lived issuance, correct-block grant, wrong-block/nonresident/expired denial, atomic replay rejection, server expiry, permission change with restoration, event visibility and alert deduplication. A separate authenticated Realtime check received the exact committed gate event at management.
 
-Supabase and Vercel are not yet authorised for this chat. No hosted database migration, seed, demo-account provisioning, Edge Function deployment, Vercel deployment, or deployed cross-device workflow is claimed as complete.
+The private, ignored `.env.operator.local` contains the shared fictional demo password. Do not commit or distribute that file publicly. No service-role key is in the browser configuration. Browser variables use only the public publishable key.
 
-The next step is to authorise the Supabase and Vercel integrations. A new dedicated fictional Supabase project and three separate Vercel projects should be used. Never run the reset against another database or upload private service-role keys into a browser build.
+The database security advisor's remaining deny-all RLS notices are intentional for service-only tables. Leaked password protection is disabled in the account settings; demo passwords are randomly generated. See https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection for that optional Auth setting.
 
-## Connected verification command
-
-The engineering operator supplies `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `DEMO_PASSWORD` through the process environment, then runs:
-
-```text
-npm run verify:connected
-```
-
-The check creates fictional access events and may create an operational alert. It restores Alex's original permission in a `finally` block after its permission-change test. It does not claim to exercise a physical camera, browser rendering, or Realtime transport. Those are checked separately on the three deployed URLs.
+Camera hardware must still be rehearsed on the actual presentation device. Camera use requires HTTPS and browser permission; manual QR input and clearly labelled synthetic demo controls provide fallback paths.

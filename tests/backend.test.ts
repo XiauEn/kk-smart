@@ -33,6 +33,18 @@ beforeAll(async () => {
     readFileSync("supabase/migrations/202610220002_demo_issuance.sql", "utf8"),
   );
   await db.exec(readFileSync("supabase/seed/demo.sql", "utf8"));
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/20261022150535_server_demo_configuration.sql",
+      "utf8",
+    ),
+  );
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/20261022150933_tighten_rls_and_indexes.sql",
+      "utf8",
+    ),
+  );
   await db.query(`insert into auth.users(id) values ($1),($2),($3),($4)`, [
     actor,
     terminal,
@@ -178,6 +190,26 @@ describe.sequential("trusted PostgreSQL backend", () => {
     await expect(
       rpc("kk_declare", [outsider, { holiday_name: "Semester break" }]),
     ).rejects.toThrow("Student account required");
+  });
+  it("requires an operator flag and an authorised terminal for demo controls", async () => {
+    expect(await rpc("kk_demo_controls_enabled", [terminal])).toBe(false);
+    await db.exec(
+      "update kk_internal.settings set value='true'::jsonb where key='demo_controls_enabled'",
+    );
+    expect(await rpc("kk_demo_controls_enabled", [terminal])).toBe(true);
+    expect(await rpc("kk_demo_controls_enabled", [outsider])).toBe(false);
+    await db.exec(
+      "update kk_internal.settings set value='false'::jsonb where key='demo_controls_enabled'",
+    );
+  });
+  it("consumes setup challenges once and denies expired challenges", async () => {
+    await db.query(
+      "insert into kk_internal.setup_challenges(credential_hash,expires_at) values($1,clock_timestamp()+interval '1 minute'),($2,clock_timestamp()-interval '1 minute')",
+      ["a".repeat(64), "b".repeat(64)],
+    );
+    expect(await rpc("kk_consume_setup", ["a".repeat(64)])).toBe(true);
+    expect(await rpc("kk_consume_setup", ["a".repeat(64)])).toBe(false);
+    expect(await rpc("kk_consume_setup", ["b".repeat(64)])).toBe(false);
   });
   it("prevents direct browser mutation and protects identity data with RLS", async () => {
     await db.exec(

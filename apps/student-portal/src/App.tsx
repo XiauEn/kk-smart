@@ -281,7 +281,7 @@ function StudentPortal() {
                     value={credential.token}
                     size={224}
                     level="M"
-                    marginSize={1}
+                    marginSize={4}
                     title="Short-lived residential QR credential"
                   />
                 ) : (

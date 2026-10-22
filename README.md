@@ -42,6 +42,8 @@ These steps need your Supabase and Vercel accounts. No cloud credentials are inc
 1. Create a Supabase project. Keep the database password private. In its **SQL Editor**, run these files in order (copy each file's full contents and click Run):
    - `supabase/migrations/202610220001_initial.sql`
    - `supabase/migrations/202610220002_demo_issuance.sql`
+   - `supabase/migrations/20261022150535_server_demo_configuration.sql`
+   - `supabase/migrations/20261022150933_tighten_rls_and_indexes.sql`
    - `supabase/seed/demo.sql`
 2. In Supabase project settings, copy the project URL, public **anon key** (or publishable key), and the **service-role key**. The service-role key is for the operator provisioning script only, never a browser or Vercel variable.
 3. Open PowerShell in the repository. Set the following values in that shell. Replace placeholders privately; do not save secrets in the repository:

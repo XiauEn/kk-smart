@@ -78,7 +78,14 @@ Deno.serve(async (req: Request) => {
         await rpc("kk_declare", { p_declaration: body.declaration });
         break;
       case "demo_verify": {
-        if (Deno.env.get("DEMO_CONTROLS_ENABLED") !== "true")
+        const { data: databaseDemoEnabled } = await admin.rpc(
+          "kk_demo_controls_enabled",
+          { p_actor: user.id },
+        );
+        if (
+          Deno.env.get("DEMO_CONTROLS_ENABLED") !== "true" &&
+          databaseDemoEnabled !== true
+        )
           throw Error(
             "Server demo controls are disabled. Use a real student QR.",
           );
