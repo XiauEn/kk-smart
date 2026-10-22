@@ -6,8 +6,83 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useKK } from "./client";
+export function Pagination({
+  total,
+  page,
+  pageSize,
+  onPageChange,
+  unit = "records",
+}: {
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  unit?: string;
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.max(0, Math.min(page, pages - 1));
+  const [draft, setDraft] = useState(String(current + 1));
+  useEffect(() => {
+    setDraft(String(current + 1));
+    if (page !== current) onPageChange(current);
+  }, [page, current, pages]);
+  return (
+    <div className="table-pagination">
+      <span>
+        {total ? current * pageSize + 1 : 0}–
+        {Math.min((current + 1) * pageSize, total)} of {total} {unit}
+      </span>
+      <div className="pagination-controls">
+        <button
+          className="button small"
+          disabled={current === 0}
+          onClick={() => onPageChange(current - 1)}
+        >
+          Previous
+        </button>
+        <form
+          className="page-jump"
+          aria-label="Jump to page"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const target = Number(draft);
+            if (Number.isInteger(target) && target >= 1 && target <= pages)
+              onPageChange(target - 1);
+          }}
+        >
+          <label>
+            Page{" "}
+            <input
+              aria-label="Page number"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={pages}
+              step={1}
+              required
+              value={draft}
+              disabled={!total}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+          </label>
+          <span>of {pages}</span>
+          <button className="button small" disabled={!total}>
+            Go
+          </button>
+        </form>
+        <button
+          className="button small"
+          disabled={current + 1 >= pages}
+          onClick={() => onPageChange(current + 1)}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
 export function Brand({ sub = "RESIDENTIAL INTELLIGENCE" }: { sub?: string }) {
   return (
     <div className="brand">

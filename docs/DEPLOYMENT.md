@@ -53,3 +53,7 @@ The average equals the sum of recorded entry days divided by all currently activ
 ## Navigation update — 23 October 2026
 
 The sortable resident table and its average now live in their own **Recorded entry days** sidebar section. Residential activity contains the aggregate charts and trends. The new section retains the college, block and date range filters, sorting, pagination, student detail links and clear limitations about days stayed. No backend or credential changes.
+
+## Direct page navigation — 23 October 2026
+
+All three paginated management views now share a page-number input and Go button: Residential records, Recorded entry days, and individual student entry history. Enter submits the jump. Inputs require a whole page number between 1 and the displayed page count. Previous/Next remain available. Empty datasets disable jumping, and page bounds adjust when the dataset shrinks. The individual history jump requests the appropriate server offset directly.

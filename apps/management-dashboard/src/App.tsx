@@ -1,3 +1,4 @@
+import { Pagination } from "@kk/shared";
 import StudentDetail from "./StudentDetail";
 import RecordedEntryTable from "./RecordedEntryTable";
 import HolidayPlanning from "./HolidayPlanning";
@@ -1034,29 +1035,13 @@ function Management() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="table-pagination">
-                      <span>
-                        Showing {Math.min(recordPage * 12 + 1, records.length)}–
-                        {Math.min(recordPage * 12 + 12, records.length)} of{" "}
-                        {records.length}
-                      </span>
-                      <div>
-                        <button
-                          className="button small"
-                          disabled={recordPage === 0}
-                          onClick={() => setRecordPage(recordPage - 1)}
-                        >
-                          Previous
-                        </button>
-                        <button
-                          className="button small"
-                          disabled={(recordPage + 1) * 12 >= records.length}
-                          onClick={() => setRecordPage(recordPage + 1)}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
+                    <Pagination
+                      total={records.length}
+                      page={recordPage}
+                      pageSize={12}
+                      onPageChange={setRecordPage}
+                      unit="students"
+                    />
                   </section>
                   {!s.connected && (
                     <div className="panel demo-dashboard">

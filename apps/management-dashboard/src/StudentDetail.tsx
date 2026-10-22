@@ -1,3 +1,4 @@
+import { Pagination } from "@kk/shared";
 import { useEffect, useState } from "react";
 import {
   Badge,
@@ -196,29 +197,13 @@ export default function StudentDetail({
                   No recorded entry attempts for these dates.
                 </p>
               )}
-              <div className="table-pagination">
-                <span>
-                  {history.total ? offset + 1 : 0}–
-                  {Math.min(offset + 50, history.total)} of {history.total}{" "}
-                  attempts
-                </span>
-                <div>
-                  <button
-                    className="button small"
-                    disabled={!offset}
-                    onClick={() => setOffset((x) => Math.max(0, x - 50))}
-                  >
-                    Previous entries
-                  </button>
-                  <button
-                    className="button small"
-                    disabled={offset + 50 >= history.total}
-                    onClick={() => setOffset((x) => x + 50)}
-                  >
-                    Next entries
-                  </button>
-                </div>
-              </div>
+              <Pagination
+                total={history.total}
+                page={Math.floor(offset / 50)}
+                pageSize={50}
+                onPageChange={(page) => setOffset(page * 50)}
+                unit="attempts"
+              />
             </>
           )
         )}

@@ -1,3 +1,4 @@
+import { Pagination } from "@kk/shared";
 import { useState } from "react";
 import {
   blockLabel,
@@ -147,28 +148,13 @@ export default function RecordedEntryTable({
           No active residents match the selected college and block.
         </p>
       )}
-      <div className="table-pagination">
-        <span>
-          {rows.length ? page * 15 + 1 : 0}–
-          {Math.min(page * 15 + 15, rows.length)} of {rows.length} residents
-        </span>
-        <div>
-          <button
-            className="button small"
-            disabled={!page}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous residents
-          </button>
-          <button
-            className="button small"
-            disabled={(page + 1) * 15 >= rows.length}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next residents
-          </button>
-        </div>
-      </div>
+      <Pagination
+        total={rows.length}
+        page={page}
+        pageSize={15}
+        onPageChange={setPage}
+        unit="residents"
+      />
     </section>
   );
 }
