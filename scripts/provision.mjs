@@ -20,6 +20,7 @@ const accounts = [
   ["emily@kk-smart.example", 4],
   ["management@kk-smart.example", "management"],
   ["gate-a@kk-smart.example", "terminal"],
+  ["guard-a@kk-smart.example", "guard"],
 ];
 const all = [];
 for (let page = 1; ; page++) {
@@ -68,6 +69,15 @@ for (const [email, role] of accounts) {
         },
         { onConflict: "auth_user_id" },
       );
+      if (error) throw error;
+    }
+    if (role === "guard") {
+      const { error } = await db
+        .from("guard_blocks")
+        .upsert({
+          auth_user_id: user.id,
+          block_id: "00000000-0000-4000-8000-000000001001",
+        });
       if (error) throw error;
     }
   }

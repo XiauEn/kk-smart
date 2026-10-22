@@ -33,7 +33,7 @@ const empty: Snapshot = {
   alerts: [],
   holidays: [],
 };
-type Role = "student" | "terminal" | "management";
+type Role = "student" | "terminal" | "management" | "guard";
 type Store = {
   data: Snapshot;
   connected: boolean;
@@ -101,6 +101,17 @@ export function KKProvider({
       const saved = JSON.parse(
         localStorage.getItem(storageKey) ?? "null",
       ) as Snapshot | null;
+      if (role === "guard") {
+        const demo = seed();
+        return {
+          ...demo,
+          students: [],
+          events: [],
+          holidays: [],
+          blocks: demo.blocks.slice(0, 1),
+          alerts: demo.alerts.filter((a) => a.block_id === demo.blocks[0].id),
+        };
+      }
       return saved
         ? { ...saved, holiday_periods: saved.holiday_periods ?? demoPeriods() }
         : seed();
@@ -199,7 +210,10 @@ export function KKProvider({
       return;
     }
     void refresh();
-    const timer = setInterval(() => void refresh(), 30000);
+    const timer = setInterval(
+      () => void refresh(),
+      role === "guard" ? 10000 : 30000,
+    );
     const ch = supabase!.channel(`kk-${role}`).on(
       "postgres_changes",
       {
@@ -208,12 +222,20 @@ export function KKProvider({
         table:
           role === "management"
             ? "access_events"
-            : role === "student"
-              ? "residencies"
-              : "gate_terminals",
+            : role === "guard"
+              ? "security_alerts"
+              : role === "student"
+                ? "residencies"
+                : "gate_terminals",
       },
       () => void refresh(),
     );
+    if (role === "guard")
+      ch.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "guard_blocks" },
+        () => void refresh(),
+      );
     if (role === "management" || role === "student")
       for (const table of role === "management"
         ? [

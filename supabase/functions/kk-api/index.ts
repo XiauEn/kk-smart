@@ -58,7 +58,19 @@ Deno.serve(async (req: Request) => {
     let result: unknown = { ok: true };
     switch (body.action) {
       case "snapshot":
-        result = await rpc("kk_snapshot", { p_role: body.role });
+        result = body.role === "guard" ? await rpc("kk_guard_snapshot", {}) : await rpc("kk_snapshot", { p_role: body.role });
+        break;
+      case "duties":
+        result = await rpc("kk_duties", {p_from:body.from,p_to:body.to});
+        break;
+      case "save_duty":
+        result = await rpc("kk_save_duty", {p_duty:body.duty,p_approve:body.approve === true});
+        break;
+      case "intelligence":
+        result = await rpc("kk_intelligence", {p_from:body.from,p_to:body.to,p_period:body.period_id ?? null,p_demo:body.demo === true});
+        break;
+      case "guard_alert_status":
+        await rpc("kk_guard_alert_status", {p_id:body.id,p_status:body.status});
         break;
       case "issue":
         result = await rpc("kk_issue", {});

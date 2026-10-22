@@ -8,6 +8,7 @@ const actor = "11111111-1111-4111-8111-111111111111",
   terminal = "22222222-2222-4222-8222-222222222222",
   manager = "33333333-3333-4333-8333-333333333333",
   outsider = "44444444-4444-4444-8444-444444444444";
+const guard = "55555555-5555-4555-8555-555555555555";
 async function rpc(name: string, args: unknown[] = []) {
   const p = args.map((_, i) => `$${i + 1}`).join(",");
   const r = await db.query<{ result: any }>(
@@ -51,6 +52,12 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/20261022175216_security_intelligence_and_duties.sql",
+      "utf8",
+    ),
+  );
   await db.exec(readFileSync("supabase/seed/demo.sql", "utf8"));
   await db.query(`insert into auth.users(id) values ($1),($2),($3),($4)`, [
     actor,
@@ -70,11 +77,19 @@ beforeAll(async () => {
     `insert into public.gate_terminals(auth_user_id,block_id,name) values($1,'00000000-0000-4000-8000-000000001001','Test terminal')`,
     [terminal],
   );
+  await db.query("insert into auth.users(id) values($1)", [guard]);
+  await db.query("insert into public.account_roles values($1,'guard')", [
+    guard,
+  ]);
+  await db.query(
+    "insert into public.guard_blocks values($1,'00000000-0000-4000-8000-000000001001')",
+    [guard],
+  );
 }, 60000);
 afterAll(async () => {
   await db.close();
 });
-describe.sequential("trusted PostgreSQL backend", () => {
+describe("trusted PostgreSQL backend", () => {
   it("loads all 200 fictional profiles and full snapshot without API row truncation", async () => {
     const data = await rpc("kk_snapshot", [manager, "management"]);
     expect(data.students).toHaveLength(200);
@@ -394,5 +409,220 @@ describe.sequential("trusted PostgreSQL backend", () => {
     await expect(
       rpc("kk_student_history", [manager, id, null, null, -1]),
     ).rejects.toThrow("Invalid history");
+  });
+});
+
+describe("security planning permissions and privacy", () => {
+  const blockA = "00000000-0000-4000-8000-000000001001",
+    blockB = "00000000-0000-4000-8000-000000001002";
+  const fields = {
+    block_id: blockA,
+    starts_at: "2026-12-01T02:00:00+08:00",
+    ends_at: "2026-12-01T04:00:00+08:00",
+    instructions:
+      "Demo: review entrance support without restricting resident access.",
+    source_label: "Test-only synthetic aggregate",
+    status: "draft",
+  };
+  let duty: any;
+  it("allows management drafts but hides them from guards and rejects other readers", async () => {
+    duty = await rpc("kk_save_duty", [manager, fields, false]);
+    expect(
+      (await rpc("kk_duties", [manager, "2026-12-01", "2026-12-01"])).duties,
+    ).toHaveLength(1);
+    expect(
+      (await rpc("kk_duties", [guard, "2026-12-01", "2026-12-01"])).duties,
+    ).toHaveLength(0);
+    for (const identity of [actor, terminal, outsider])
+      await expect(
+        rpc("kk_duties", [identity, "2026-12-01", "2026-12-01"]),
+      ).rejects.toThrow("Management or guard");
+    await expect(rpc("kk_save_duty", [guard, fields, true])).rejects.toThrow(
+      "Management account",
+    );
+    await expect(
+      rpc("kk_save_duty", [manager, { ...duty, status: "published" }, false]),
+    ).rejects.toThrow("human approval");
+  });
+  it("requires approval, enforces scope, and prevents stale edits", async () => {
+    const original = duty;
+    duty = await rpc("kk_save_duty", [
+      manager,
+      { ...duty, status: "published" },
+      true,
+    ]);
+    expect(duty.approved_by).toBe(manager);
+    expect(
+      (await rpc("kk_duties", [guard, "2026-12-01", "2026-12-01"])).duties,
+    ).toHaveLength(1);
+    await rpc("kk_save_duty", [
+      manager,
+      { ...fields, block_id: blockB, status: "published" },
+      true,
+    ]);
+    expect(
+      (await rpc("kk_duties", [guard, "2026-12-01", "2026-12-01"])).duties,
+    ).toHaveLength(1);
+    await expect(
+      rpc("kk_save_duty", [
+        manager,
+        {
+          ...original,
+          instructions: "Stale editor changed these instructions.",
+        },
+        false,
+      ]),
+    ).rejects.toThrow("Duty changed");
+    duty = await rpc("kk_save_duty", [
+      manager,
+      {
+        ...duty,
+        instructions: "Revised published instructions approved by management.",
+      },
+      true,
+    ]);
+    expect(duty.version).toBe(3);
+  });
+  it("RLS exposes only scoped published duties and denies direct writes", async () => {
+    await db.exec(
+      `set role authenticated; set request.jwt.claim.sub='${guard}';`,
+    );
+    try {
+      const rows = await db.query<any>("select * from public.security_duties");
+      expect(rows.rows).toHaveLength(1);
+      expect(rows.rows[0].block_id).toBe(blockA);
+      await expect(
+        db.exec("update public.security_duties set status='published'"),
+      ).rejects.toThrow("permission denied");
+      await expect(
+        db.query("select public.kk_save_duty($1,$2,true)", [guard, fields]),
+      ).rejects.toThrow("permission denied");
+    } finally {
+      await db.exec("reset role");
+    }
+    for (const identity of [actor, terminal]) {
+      await db.exec(
+        `set role authenticated; set request.jwt.claim.sub='${identity}';`,
+      );
+      try {
+        expect(
+          (await db.query("select * from public.security_duties")).rows,
+        ).toHaveLength(0);
+      } finally {
+        await db.exec("reset role");
+      }
+    }
+  });
+  it("withdraws cancelled and draft duties and records management auditing", async () => {
+    duty = await rpc("kk_save_duty", [
+      manager,
+      { ...duty, status: "cancelled" },
+      false,
+    ]);
+    expect(
+      (await rpc("kk_duties", [guard, "2026-12-01", "2026-12-01"])).duties,
+    ).toHaveLength(0);
+    expect(
+      (
+        await db.query(
+          "select * from public.audit_log where action='duty_published'",
+        )
+      ).rows.length,
+    ).toBeGreaterThan(0);
+    await expect(
+      rpc("kk_save_duty", [
+        manager,
+        { ...fields, ends_at: fields.starts_at },
+        false,
+      ]),
+    ).rejects.toThrow();
+  });
+  it("gives guards scoped alerts without student identities or access events", async () => {
+    const snapshot = await rpc("kk_guard_snapshot", [guard]);
+    expect(snapshot.blocks).toHaveLength(1);
+    expect(snapshot.students).toHaveLength(0);
+    expect(snapshot.events).toHaveLength(0);
+    expect(snapshot.alerts.every((a: any) => a.block_id === blockA)).toBe(true);
+    await expect(rpc("kk_guard_snapshot", [terminal])).rejects.toThrow(
+      "Guard account",
+    );
+    await expect(
+      rpc("kk_guard_alert_status", [
+        guard,
+        "00000000-0000-4000-8000-000000900001",
+        "resolved",
+      ]),
+    ).rejects.toThrow("scope");
+    await rpc("kk_guard_alert_status", [
+      guard,
+      "00000000-0000-4000-8000-000000900002",
+      "under_review",
+    ]);
+  });
+  it("restricts server-side analytics, validates the window, and suppresses small groups", async () => {
+    for (const identity of [guard, actor, terminal])
+      await expect(
+        rpc("kk_intelligence", [
+          identity,
+          "2025-01-01",
+          "2025-01-07",
+          null,
+          false,
+        ]),
+      ).rejects.toThrow("Management account");
+    await expect(
+      rpc("kk_intelligence", [
+        manager,
+        "2025-01-01",
+        "2025-01-02",
+        null,
+        false,
+      ]),
+    ).rejects.toThrow("seven-day");
+    await db.exec(
+      `insert into public.access_events(student_id,block_id,timestamp,granted) select ('00000000-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'${blockA}','2025-01-02T03:00:00+08:00',true from generate_series(1,4) i`,
+    );
+    let result = await rpc("kk_intelligence", [
+      manager,
+      "2025-01-01",
+      "2025-01-07",
+      null,
+      false,
+    ]);
+    expect(
+      result.hourly.find((h: any) => h.block_id === blockA && h.hour === 3)
+        .entries,
+    ).toBeNull();
+    expect(JSON.stringify(result)).not.toContain("student_id");
+    await db.exec(
+      `insert into public.access_events(student_id,block_id,timestamp,granted) values('00000000-0000-4000-8000-000000000005','${blockA}','2025-01-02T03:00:00+08:00',true)`,
+    );
+    result = await rpc("kk_intelligence", [
+      manager,
+      "2025-01-01",
+      "2025-01-07",
+      null,
+      false,
+    ]);
+    expect(
+      result.hourly.find((h: any) => h.block_id === blockA && h.hour === 3)
+        .entries,
+    ).toBe(5);
+    const count = (
+      await db.query<any>("select count(*) as n from public.access_events")
+    ).rows[0].n;
+    const demo = await rpc("kk_intelligence", [
+      manager,
+      "2025-01-01",
+      "2025-01-07",
+      null,
+      true,
+    ]);
+    expect(demo.source).toContain("Synthetic");
+    expect(demo.hourly[0].entries).toBe(30);
+    expect(
+      (await db.query<any>("select count(*) as n from public.access_events"))
+        .rows[0].n,
+    ).toBe(count);
   });
 });

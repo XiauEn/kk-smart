@@ -7,14 +7,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n student,gate,management -c cyan,green,blue \"npm run dev -w @kk/student-portal\" \"npm run dev -w @kk/gate-scanner\" \"npm run dev -w @kk/management-dashboard\"",
+    "dev": "concurrently -n student,gate,management,guard -c cyan,green,blue,magenta \"npm run dev -w @kk/student-portal\" \"npm run dev -w @kk/gate-scanner\" \"npm run dev -w @kk/management-dashboard\" \"npm run dev -w @kk/guard-web\"",
     "build": "npm run typecheck && npm run build --workspaces --if-present",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "provision": "node scripts/provision.mjs",
     "verify:connected": "node scripts/verify-connected.mjs",
     "format": "prettier --write apps packages tests scripts docs README.md package.json tsconfig.json",
-    "verify:realtime": "node scripts/verify-realtime.mjs"
+    "verify:realtime": "node scripts/verify-realtime.mjs",
+    "verify:operations": "node scripts/verify-operations.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
@@ -36,7 +37,7 @@
     "prettier": "^3.9.10",
     "typescript": "^5.9.2",
     "vite": "^7.1.0",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=22.12.0"

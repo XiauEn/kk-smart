@@ -2,7 +2,7 @@
 
 **One ID, One Campus — Trust: One Identity, Safer Campus.** A working competition prototype for TEF 2026 at the University of Malaya. All identities, permissions and activity are **Demo Data**. This is a concept prototype, not an official UM system or a physical access controller.
 
-Three independent React + TypeScript + Vite apps share a typed package and one Supabase backend. They have separate HTML entry points, dev servers, builds and Vercel projects. There is no combined website or cross-app localStorage dependency.
+Four independent React + TypeScript + Vite apps share a typed package and one Supabase backend. They have separate HTML entry points, dev servers, builds and Vercel projects. There is no combined website or cross-app localStorage dependency.
 
 ## Start here: no accounts required
 
@@ -18,8 +18,9 @@ npm run dev
 | Student Portal       | http://localhost:5173 | `npm run build -w @kk/student-portal`       |
 | Gate Scanner         | http://localhost:5174 | `npm run build -w @kk/gate-scanner`         |
 | Management Dashboard | http://localhost:5175 | `npm run build -w @kk/management-dashboard` |
+| Guard Web            | http://localhost:5176 | `npm run build -w @kk/guard-web`            |
 
-All three default to **Local Demo Mode** without environment files. If Windows asks about network access, localhost is sufficient for a same-laptop demonstration. Stop the servers with Ctrl+C.
+All four default to **Local Demo Mode** without environment files. If Windows asks about network access, localhost is sufficient for a same-laptop demonstration. Stop the servers with Ctrl+C.
 
 **Local mode is standalone per app and browser origin.** The four scenario outcomes and initial seed agree, but gate events do not appear in the separate dashboard, and dashboard edits do not alter a separate gate. The dashboard has its own security scenario, holiday toggle, and permission test so the fallback presentation remains useful. Use connected mode for a truthful cross-device demonstration.
 
@@ -35,7 +36,7 @@ The stack uses React, TypeScript, plain shared CSS, Lucide, Recharts, `qrcode.re
 - Connected Auth, RLS, trusted QR issuance and verification, permission/audit transactions, alert workflow, Realtime refresh plus 30-second polling fallback.
 - Offline simulation with a persistent synthetic queue and separately classified backend telemetry.
 
-## Supabase setup: one project for all three apps
+## Supabase setup: one project for all four apps
 
 These steps need your Supabase and Vercel accounts. No cloud credentials are included in this repository. Use a **dedicated fictional demonstration project**.
 
@@ -45,6 +46,7 @@ These steps need your Supabase and Vercel accounts. No cloud credentials are inc
    - `supabase/migrations/20261022150535_server_demo_configuration.sql`
    - `supabase/migrations/20261022150933_tighten_rls_and_indexes.sql`
    - `supabase/migrations/20261022161910_holiday_periods_and_student_history.sql`
+   - `supabase/migrations/20261022175216_security_intelligence_and_duties.sql`
    - `supabase/seed/demo.sql`
 2. In Supabase project settings, copy the project URL, public **anon key** (or publishable key), and the **service-role key**. The service-role key is for the operator provisioning script only, never a browser or Vercel variable.
 3. Open PowerShell in the repository. Set the following values in that shell. Replace placeholders privately; do not save secrets in the repository:
@@ -60,14 +62,15 @@ These steps need your Supabase and Vercel accounts. No cloud credentials are inc
 
    Provisioning is repeatable. It preserves existing passwords. To change an existing password, use Supabase Auth's user administration. All created accounts are fictional and email-confirmed by the operator; no email delivery is needed.
 
-   | App        | Email                         | Permission                 |
-   | ---------- | ----------------------------- | -------------------------- |
-   | Student    | `alex@kk-smart.example`       | DEMO001, KK3 A             |
-   | Student    | `sarah@kk-smart.example`      | DEMO002, KK3 B             |
-   | Student    | `daniel@kk-smart.example`     | DEMO003, no allocation     |
-   | Student    | `emily@kk-smart.example`      | DEMO004, expired           |
-   | Gate       | `gate-a@kk-smart.example`     | Registered terminal, KK3 A |
-   | Management | `management@kk-smart.example` | Management role            |
+   | App        | Email                         | Permission                   |
+   | ---------- | ----------------------------- | ---------------------------- |
+   | Student    | `alex@kk-smart.example`       | DEMO001, KK3 A               |
+   | Student    | `sarah@kk-smart.example`      | DEMO002, KK3 B               |
+   | Student    | `daniel@kk-smart.example`     | DEMO003, no allocation       |
+   | Student    | `emily@kk-smart.example`      | DEMO004, expired             |
+   | Gate       | `gate-a@kk-smart.example`     | Registered terminal, KK3 A   |
+   | Management | `management@kk-smart.example` | Management role              |
+   | Guard      | `guard-a@kk-smart.example`    | Guard role, KK3 Block A only |
 
    New accounts use your chosen `DEMO_PASSWORD`. Connected students cannot select another student's identity: sign out and sign in with the other fictional account. The gate's server demo buttons can exercise all four profiles without switching student accounts.
 
@@ -82,7 +85,7 @@ These steps need your Supabase and Vercel accounts. No cloud credentials are inc
 
    Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` inside the function. `verify_jwt=false` in `config.toml` allows current public-key configurations; **the function independently verifies every bearer token with `auth.getUser()` before any database operation**. Anonymous requests are rejected. The demo scenario route also requires an active terminal and the explicit server demo setting. Turn this setting off after the presentation.
 
-5. Copy `.env.example` to `.env.local` in **each of the three app directories**, and set:
+5. Copy `.env.example` to `.env.local` in **each of the four app directories**, and set:
 
    ```dotenv
    VITE_MODE=connected
@@ -90,21 +93,22 @@ These steps need your Supabase and Vercel accounts. No cloud credentials are inc
    VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_OR_PUBLISHABLE_KEY
    ```
 
-   Restart `npm run dev`. Sign into each app using its respective account. Keep the three browser origins separate; their Supabase Auth sessions are independently stored. Do not place the service-role key in any `VITE_` variable.
+   Restart `npm run dev`. Sign into each app using its respective account. Keep the four browser origins separate; their Supabase Auth sessions are independently stored. Do not place the service-role key in any `VITE_` variable.
 
-6. Optionally restrict CORS by setting `ALLOWED_ORIGINS` in the function's secrets to a comma-separated list of your actual three HTTPS Vercel URLs and any local rehearsal URLs. There must be no spaces inside an origin or trailing slash. When omitted, CORS permits origins but Auth and database roles still enforce access. When set, remember to add new Vercel preview origins before testing them.
+6. Optionally restrict CORS by setting `ALLOWED_ORIGINS` in the function's secrets to a comma-separated list of your actual four HTTPS Vercel URLs and any local rehearsal URLs. There must be no spaces inside an origin or trailing slash. When omitted, CORS permits origins but Auth and database roles still enforce access. When set, remember to add new Vercel preview origins before testing them.
 
 The migrations enable Realtime for the relevant tables. Confirm the `supabase_realtime` publication includes them in Database → Replication if Realtime is disabled in your project. Authenticated management subscriptions respect RLS. A periodic refresh provides a fallback; the stale banner appears on network loss or a subscription error.
 
-## Three Vercel deployments
+## Four Vercel deployments
 
-Push the whole `kk-smart` directory as the root of one GitHub repository. Create/import that repository into **three separate Vercel projects**:
+Push the whole `kk-smart` directory as the root of one GitHub repository. Create/import that repository into **four separate Vercel projects**:
 
 | Suggested project name | Root Directory              | Build command   | Output |
 | ---------------------- | --------------------------- | --------------- | ------ |
 | kk-smart-student       | `apps/student-portal`       | `npm run build` | `dist` |
 | kk-smart-gate          | `apps/gate-scanner`         | `npm run build` | `dist` |
 | kk-smart-management    | `apps/management-dashboard` | `npm run build` | `dist` |
+| kk-smart-guard         | `apps/guard-web`            | `npm run build` | `dist` |
 
 Select Vite, Node.js 22 or newer, and enable **Include source files outside of the Root Directory in the Build Step**, so `packages/shared` and workspace dependencies are available. Use Vercel's automatic npm workspace installation from the root lockfile. If the UI requests an override, install from repository root with `cd ../.. && npm ci`. Each app already has `vercel.json` for its own output and SPA fallback.
 
@@ -179,3 +183,7 @@ Tests exercise grants/denials, invalid QR, exact expiry, replay, rotation, permi
 Before presenting, complete the connected rehearsal in `docs/DEMO.md` on your actual deployed domains. Hosted integration cannot be certified without a configured project. The UI is an access simulation; the system is not hardened for real residential deployment. Production work would include device enrollment/rotation, stronger identity proof, MFA, abuse throttling, retention policies/consent, accessibility review, operational monitoring and an independent fire-safety design.
 
 Implementation references: [Supabase function authentication](https://supabase.com/docs/guides/functions/auth-legacy-jwt), [Vercel monorepos](https://vercel.com/docs/monorepos), [Vite production builds](https://vite.dev/guide/build).
+
+## Adaptive security and duty deployment
+
+See [SECURITY-OPERATIONS.md](docs/SECURITY-OPERATIONS.md) for roles, privacy thresholds, rules, synchronisation, tests and the 90-second demonstration. Management has Adaptive Security Intelligence and Security Duty Schedule sections. Guard Web is a fourth independently deployed application; only scoped published duties and operational alerts are available to guards.

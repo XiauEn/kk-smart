@@ -1,3 +1,6 @@
+import SecurityIntelligence from "./SecurityIntelligence";
+import DutyPlanning from "./DutyPlanning";
+import type { DutyDraft } from "@kk/shared";
 import { Pagination } from "@kk/shared";
 import StudentDetail from "./StudentDetail";
 import RecordedEntryTable from "./RecordedEntryTable";
@@ -61,6 +64,12 @@ import {
   YAxis,
 } from "recharts";
 const navigation = [
+  {
+    id: "intelligence",
+    title: "Adaptive Security Intelligence",
+    icon: ShieldCheck,
+  },
+  { id: "duties", title: "Security Duty Schedule", icon: CalendarDays },
   { id: "overview", title: "Overview", icon: LayoutDashboard },
   { id: "activity", title: "Residential activity", icon: ChartNoAxesCombined },
   { id: "entry-days", title: "Recorded entry days", icon: ListOrdered },
@@ -69,6 +78,14 @@ const navigation = [
   { id: "records", title: "Residential records", icon: Users },
 ];
 const titles: Record<string, [string, string]> = {
+  intelligence: [
+    "Adaptive Security Intelligence",
+    "Aggregated patterns. Explainable recommendations. Human decisions.",
+  ],
+  duties: [
+    "Security Duty Schedule",
+    "Review, approve and publish block-based security instructions.",
+  ],
   overview: [
     "A safer campus starts here.",
     "Your residential community, at a glance.",
@@ -117,6 +134,7 @@ function ChartPanel({
 }
 function Management() {
   const s = useKK();
+  const [dutyDraft, setDutyDraft] = useState<DutyDraft | null>(null);
   const [page, setPage] = useState("overview"),
     [mobile, setMobile] = useState(false),
     [filters, setFilters] = useState<Filters>({
@@ -356,7 +374,7 @@ function Management() {
                 Export aggregate data
               </button>
             </div>
-            {!detail && (
+            {!detail && page !== "intelligence" && page !== "duties" && (
               <div className="filter-bar panel">
                 <div className="filter-title">
                   <SlidersHorizontal size={16} />
@@ -482,6 +500,20 @@ function Management() {
                   Refresh
                 </button>
               </div>
+            )}
+            {page === "intelligence" && (
+              <SecurityIntelligence
+                onDraft={(draft) => {
+                  setDutyDraft(draft);
+                  navigate("duties");
+                }}
+              />
+            )}
+            {page === "duties" && (
+              <DutyPlanning
+                initial={dutyDraft}
+                onClear={() => setDutyDraft(null)}
+              />
             )}
             {page === "overview" && (
               <>

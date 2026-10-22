@@ -2733,3 +2733,87 @@ td.mono {
     justify-content: flex-start;
   }
 }
+
+.operational-form,
+.duty-card,
+.insight-card {
+  padding: 24px;
+  margin: 18px 0;
+}
+.operational-form form {
+  display: grid;
+  gap: 16px;
+}
+.operational-form label {
+  flex: 1;
+  min-width: 160px;
+}
+.operational-form input,
+.operational-form select,
+.operational-form textarea,
+.guard-main select {
+  padding: 10px 12px;
+  border: 1px solid #dce5e1;
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+  color: #233b34;
+  width: 100%;
+}
+.action-row,
+.guard-tabs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.insight-card p,
+.duty-card p {
+  line-height: 1.65;
+}
+.insight-card > button {
+  margin-top: 18px;
+  display: flex;
+}
+.insight-card small,
+.duty-card small {
+  display: block;
+  color: #61766d;
+  line-height: 1.5;
+}
+.guard-main {
+  max-width: 1050px;
+  padding: 32px 24px;
+  margin: auto;
+}
+.guard-main .duty-card {
+  border-left: 4px solid #158d7d;
+}
+.guard-main .guard-tabs {
+  position: sticky;
+  top: 0;
+  background: #f6f9f7;
+  padding: 12px 0;
+  z-index: 2;
+}
+.sidebar nav .button,
+.sidebar nav button {
+  white-space: normal;
+  text-align: left;
+}
+@media (max-width: 600px) {
+  .guard-main {
+    padding: 20px 14px;
+  }
+  .operational-form,
+  .duty-card,
+  .insight-card {
+    padding: 18px;
+  }
+  .operational-form .panel-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
