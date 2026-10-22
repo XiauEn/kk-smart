@@ -49,3 +49,7 @@ Residential activity now includes a sortable, paginated resident table using the
 The average equals the sum of recorded entry days divided by all currently active residents in the selected blocks, including those with zero entries. Only successful entry events at selected blocks within the selected MYT dates contribute. Current assignments define the cohort; historical assignments can differ. This does not measure actual days/nights stayed, occupancy or residential eligibility.
 
 33 automated tests passed, including MYT midnight boundaries, repeated same-day entries, denied/wrong-block exclusion, zero-entry residents and empty cohorts. No database migration or Edge Function change is needed for this release.
+
+## Navigation update — 23 October 2026
+
+The sortable resident table and its average now live in their own **Recorded entry days** sidebar section. Residential activity contains the aggregate charts and trends. The new section retains the college, block and date range filters, sorting, pagination, student detail links and clear limitations about days stayed. No backend or credential changes.

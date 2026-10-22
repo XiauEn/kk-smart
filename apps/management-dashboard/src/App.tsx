@@ -33,6 +33,7 @@ import {
   Download,
   Info,
   LayoutDashboard,
+  ListOrdered,
   Menu,
   RefreshCw,
   Search,
@@ -61,6 +62,7 @@ import {
 const navigation = [
   { id: "overview", title: "Overview", icon: LayoutDashboard },
   { id: "activity", title: "Residential activity", icon: ChartNoAxesCombined },
+  { id: "entry-days", title: "Recorded entry days", icon: ListOrdered },
   { id: "holiday", title: "Holiday planning", icon: CalendarDays },
   { id: "security", title: "Security monitoring", icon: ShieldAlert },
   { id: "records", title: "Residential records", icon: Users },
@@ -73,6 +75,10 @@ const titles: Record<string, [string, string]> = {
   activity: [
     "Residential activity",
     "Understand patterns. Plan with perspective.",
+  ],
+  "entry-days": [
+    "Recorded entry days",
+    "Review recorded entry activity by resident. These figures do not measure days stayed.",
   ],
   holiday: [
     "Holiday safety planning",
@@ -656,6 +662,18 @@ function Management() {
                 </div>
               </>
             )}
+            {page === "entry-days" && (
+              <RecordedEntryTable
+                key={`${filters.kk}-${filters.block}-${filters.from}-${filters.to}`}
+                data={a}
+                blocks={s.data.blocks}
+                filters={filters}
+                onDetails={(id) => {
+                  setPage("records");
+                  openDetail(id);
+                }}
+              />
+            )}
             {page === "activity" && (
               <>
                 <label className="trend-control">
@@ -675,16 +693,7 @@ function Management() {
                   Recorded entry events describe activity, not occupancy, nights
                   stayed, or accommodation eligibility.
                 </div>
-                <RecordedEntryTable
-                  key={`${filters.kk}-${filters.block}-${filters.from}-${filters.to}`}
-                  data={a}
-                  blocks={s.data.blocks}
-                  filters={filters}
-                  onDetails={(id) => {
-                    setPage("records");
-                    openDetail(id);
-                  }}
-                />
+
                 <div className="metric-grid three">
                   <Metric
                     label="Successful entry events"
