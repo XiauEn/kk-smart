@@ -406,7 +406,7 @@ function GateScanner() {
             </div>
             <p className="fine">
               {s.connected
-                ? "Server demo controls require DEMO_CONTROLS_ENABLED=true."
+                ? "Fictional scenarios require server-enabled demo controls."
                 : "Standalone simulation. Other apps do not receive these events."}
             </p>
             <div className="demo-button-grid">

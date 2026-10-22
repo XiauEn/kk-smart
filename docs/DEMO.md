@@ -7,7 +7,7 @@ Rehearse on the same devices and browsers you will use in the competition. Keep 
 1. Run tests and build. Reset the fictional dataset. Open all three independent deployed apps.
 2. Connected presentation: sign the phone into Alex, the gate laptop into `gate-a`, and the dashboard into `management`. Let the management snapshot finish loading. Check the gate heading is **KK3 · Block A**.
 3. Allow the gate camera. Scan a fresh phone QR. Confirm an actual new event reaches the separate dashboard. A missed short-lived QR can be retried after the next refresh.
-4. Confirm audio works after a button click, and avoid muted speakers. Demo buttons work if the camera fails; connected buttons require `DEMO_CONTROLS_ENABLED=true`.
+4. Confirm audio works after a button click, and avoid muted speakers. Demo buttons work if the camera fails; connected buttons require the server-side demo flag (already enabled for this project).
 5. For the five-failure demonstration, reset events or wait more than two minutes after earlier denied attempts. Close other gate tabs to avoid confusing simultaneous results. A QR is single use, so reuse should deny access.
 6. Use dashboard date filters that include today and all blocks. Keep the correct browser origins in `ALLOWED_ORIGINS` if enabled.
 

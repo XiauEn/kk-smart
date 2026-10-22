@@ -118,10 +118,13 @@ function StudentPortal() {
       <div className="auth-shell">
         <div className="panel">
           <Brand />
-          <h2>No student profile linked</h2>
+          <h2>
+            {s.loading ? "Loading your identity…" : "No student profile linked"}
+          </h2>
           <p>
-            Ask the project administrator to run account provisioning, then
-            reload.
+            {s.loading
+              ? "Fetching your verified profile securely."
+              : "Ask the project administrator to run account provisioning, then reload."}
           </p>
           <ErrorNotice />
           <SessionButton />
