@@ -32,7 +32,7 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("supabase/migrations/202610220002_demo_issuance.sql", "utf8"),
   );
-  await db.exec(readFileSync("supabase/seed/demo.sql", "utf8"));
+
   await db.exec(
     readFileSync(
       "supabase/migrations/20261022150535_server_demo_configuration.sql",
@@ -45,6 +45,13 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/20261022161910_holiday_periods_and_student_history.sql",
+      "utf8",
+    ),
+  );
+  await db.exec(readFileSync("supabase/seed/demo.sql", "utf8"));
   await db.query(`insert into auth.users(id) values ($1),($2),($3),($4)`, [
     actor,
     terminal,
@@ -173,13 +180,18 @@ describe.sequential("trusted PostgreSQL backend", () => {
     ).rejects.toThrow("Valid block");
   });
   it("binds holiday declarations to the authenticated student", async () => {
+    const period = (
+      await rpc("kk_snapshot", [actor, "student"])
+    ).holiday_periods.find((p: any) => p.name === "Semester break");
     await rpc("kk_declare", [
       actor,
       {
         student_id: outsider,
         holiday_name: "Semester break",
-        start_date: "2026-10-22",
-        end_date: "2026-11-01",
+        period_id: period.id,
+        response: "entire",
+        start_date: period.start_date,
+        end_date: period.end_date,
         staying: true,
       },
     ]);
@@ -233,5 +245,154 @@ describe.sequential("trusted PostgreSQL backend", () => {
     } finally {
       await db.exec("reset role;");
     }
+  });
+  it("publishes named holidays only for management and validates date bounds", async () => {
+    const period = {
+      name: "Test study break · Demo",
+      start_date: "2026-12-01",
+      end_date: "2026-12-14",
+      declaration_deadline: "2026-11-27",
+    };
+    await expect(rpc("kk_holiday_period", [actor, period])).rejects.toThrow(
+      "Management account required",
+    );
+    await expect(
+      rpc("kk_holiday_period", [
+        manager,
+        { ...period, end_date: "2026-11-01" },
+      ]),
+    ).rejects.toThrow();
+    await rpc("kk_holiday_period", [manager, period]);
+    const snapshot = await rpc("kk_snapshot", [actor, "student"]);
+    const published = snapshot.holiday_periods.find(
+      (p: any) => p.name === period.name,
+    );
+    expect(published.start_date).toBe(period.start_date);
+    await expect(
+      rpc("kk_declare", [
+        actor,
+        {
+          period_id: published.id,
+          response: "dates",
+          start_date: "2026-11-30",
+          end_date: "2026-12-02",
+        },
+      ]),
+    ).rejects.toThrow("within holiday");
+    await expect(
+      rpc("kk_declare", [
+        actor,
+        {
+          period_id: published.id,
+          response: "dates",
+          start_date: "2026-12-04",
+          end_date: "2026-12-02",
+        },
+      ]),
+    ).rejects.toThrow("within holiday");
+    await rpc("kk_declare", [
+      actor,
+      {
+        period_id: published.id,
+        student_id: outsider,
+        response: "dates",
+        start_date: "2026-12-03",
+        end_date: "2026-12-07",
+      },
+    ]);
+    let declaration = (
+      await rpc("kk_snapshot", [actor, "student"])
+    ).holidays.find((h: any) => h.period_id === published.id);
+    expect(declaration.student_id).toBe(snapshot.students[0].id);
+    expect(declaration.staying).toBe(true);
+    expect(declaration.start_date).toBe("2026-12-03");
+    await rpc("kk_declare", [
+      actor,
+      { period_id: published.id, response: "away" },
+    ]);
+    declaration = (await rpc("kk_snapshot", [actor, "student"])).holidays.find(
+      (h: any) => h.period_id === published.id,
+    );
+    expect(declaration.staying).toBe(false);
+    await rpc("kk_declare", [
+      actor,
+      { period_id: published.id, response: "unsure" },
+    ]);
+    expect(
+      (await rpc("kk_snapshot", [actor, "student"])).holidays.find(
+        (h: any) => h.period_id === published.id,
+      ).response,
+    ).toBe("unsure");
+  });
+  it("rejects declarations after the server-controlled deadline", async () => {
+    await rpc("kk_holiday_period", [
+      manager,
+      {
+        name: "Closed break · Demo",
+        start_date: "2020-01-01",
+        end_date: "2020-01-14",
+        declaration_deadline: "2020-01-01",
+      },
+    ]);
+    const p = (
+      await rpc("kk_snapshot", [actor, "student"])
+    ).holiday_periods.find((p: any) => p.name === "Closed break · Demo");
+    await expect(
+      rpc("kk_declare", [actor, { period_id: p.id, response: "entire" }]),
+    ).rejects.toThrow("deadline");
+  });
+  it("restricts and audits individual history, with stable pagination and MYT date filters", async () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    await expect(
+      rpc("kk_student_history", [actor, id, null, null, 0]),
+    ).rejects.toThrow("Management account required");
+    await expect(
+      rpc("kk_student_history", [terminal, id, null, null, 0]),
+    ).rejects.toThrow("Management account required");
+    await db.query(
+      `insert into public.access_events(student_id,block_id,timestamp,granted,verification_method) select $1,'00000000-0000-4000-8000-000000001001','2026-08-01T16:00:00Z'::timestamptz + n * interval '1 second',true,'history_test' from generate_series(1,55) n`,
+      [id],
+    );
+    const first = await rpc("kk_student_history", [
+      manager,
+      id,
+      "2026-08-02",
+      "2026-08-02",
+      0,
+    ]);
+    const second = await rpc("kk_student_history", [
+      manager,
+      id,
+      "2026-08-02",
+      "2026-08-02",
+      50,
+    ]);
+    expect(first.total).toBe(55);
+    expect(first.events).toHaveLength(50);
+    expect(second.events).toHaveLength(5);
+    expect(
+      new Set([...first.events, ...second.events].map((e: any) => e.id)).size,
+    ).toBe(55);
+    expect(
+      (
+        await rpc("kk_student_history", [
+          manager,
+          id,
+          "2026-08-01",
+          "2026-08-01",
+          0,
+        ])
+      ).total,
+    ).toBe(0);
+    expect(
+      (
+        await db.query(
+          "select * from public.audit_log where action='student_history_view'",
+        )
+      ).rows.length,
+    ).toBeGreaterThan(0);
+    await expect(
+      rpc("kk_student_history", [manager, id, null, null, -1]),
+    ).rejects.toThrow("Invalid history");
   });
 });

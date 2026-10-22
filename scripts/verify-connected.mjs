@@ -149,5 +149,5 @@ try {
     "Connected API rehearsal complete. Browser, camera, and Realtime transport checks remain separate.",
   );
 } finally {
-  await Promise.all(clients.map((c) => c.auth.signOut()));
+  await Promise.all(clients.map((c) => c.auth.signOut({ scope: "local" })));
 }

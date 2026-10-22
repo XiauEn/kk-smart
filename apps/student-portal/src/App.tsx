@@ -1,3 +1,4 @@
+import HolidayDeclaration from "./HolidayDeclaration";
 import {
   Badge,
   Brand,
@@ -5,14 +6,11 @@ import {
   ModeBanner,
   SessionButton,
   blockLabel,
-  dayOffset,
   useKK,
   type Credential,
 } from "@kk/shared";
 import "@kk/shared/styles.css";
 import {
-  ArrowUpRight,
-  CalendarDays,
   Check,
   GraduationCap,
   LockKeyhole,
@@ -110,9 +108,6 @@ function StudentPortal() {
   useEffect(() => {
     if (s.online && deadline.current <= performance.now()) refreshRef.current();
   }, [s.online]);
-  const holiday = s.data.holidays.find(
-    (h) => h.student_id === student?.id && h.holiday_name === "Semester break",
-  );
   if (!student)
     return (
       <div className="auth-shell">
@@ -360,43 +355,7 @@ function StudentPortal() {
               stays open.
             </div>
           </div>
-          <div className="panel holiday-card">
-            <CalendarDays size={23} />
-            <div>
-              <h3>Staying over the semester break?</h3>
-              <p>Help your college plan security and emergency support.</p>
-              <div className="fine">
-                {dayOffset(0)} — {dayOffset(14)} · Demo holiday
-              </div>
-              <button
-                className="text-button"
-                onClick={async () => {
-                  try {
-                    await s.declare({
-                      id: crypto.randomUUID(),
-                      student_id: student.id,
-                      holiday_name: "Semester break",
-                      start_date: dayOffset(0),
-                      end_date: dayOffset(14),
-                      staying: !holiday?.staying,
-                    });
-                    setNotice(
-                      holiday?.staying
-                        ? "Declaration withdrawn."
-                        : "Holiday stay declared.",
-                    );
-                  } catch (e) {
-                    setNotice((e as Error).message);
-                  }
-                }}
-              >
-                {holiday?.staying
-                  ? "Withdraw stay declaration"
-                  : "Declare a holiday stay"}
-                <ArrowUpRight size={14} />
-              </button>
-            </div>
-          </div>
+          <HolidayDeclaration student={student} />
           {notice && (
             <div className="notice" role="status">
               {notice}

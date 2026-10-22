@@ -40,13 +40,24 @@ export type Holiday = {
   start_date: string;
   end_date: string;
   staying: boolean;
+  period_id?: string;
+  response?: "entire" | "dates" | "away" | "unsure";
 };
+export type HolidayPeriod = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  declaration_deadline: string;
+};
+export type EntryHistory = { events: AccessEvent[]; total: number };
 export type Snapshot = {
   students: Student[];
   blocks: Block[];
   events: AccessEvent[];
   alerts: Alert[];
   holidays: Holiday[];
+  holiday_periods?: HolidayPeriod[];
   terminal_block_id?: string;
   server_time?: string;
 };
@@ -88,6 +99,41 @@ export const blockLabel = (blocks: Block[], id: string | null) => {
   const b = blocks.find((x) => x.id === id);
   return b ? `${b.kk_name} · Block ${b.block_name}` : "No allocation";
 };
+export function demoPeriods(now = Date.now()): HolidayPeriod[] {
+  return [
+    {
+      id: uid(700001),
+      name: "Semester break · Demo",
+      start_date: dayOffset(0, now),
+      end_date: dayOffset(14, now),
+      declaration_deadline: dayOffset(14, now),
+    },
+    {
+      id: uid(700002),
+      name: "Year-end break · Demo",
+      start_date: dayOffset(40, now),
+      end_date: dayOffset(54, now),
+      declaration_deadline: dayOffset(35, now),
+    },
+  ];
+}
+export function validateDeclaration(h: Holiday, p: HolidayPeriod) {
+  if (!["entire", "dates", "away", "unsure"].includes(h.response ?? ""))
+    throw Error("Choose your stay plan.");
+  if (
+    h.start_date < p.start_date ||
+    h.end_date > p.end_date ||
+    h.end_date < h.start_date
+  )
+    throw Error("Stay dates must be within the selected holiday.");
+  if (
+    h.response === "entire" &&
+    (h.start_date !== p.start_date || h.end_date !== p.end_date)
+  )
+    throw Error("Entire-period stays must cover the holiday dates.");
+  if (h.staying !== (h.response === "entire" || h.response === "dates"))
+    throw Error("Invalid stay plan.");
+}
 export function seed(now = Date.now()): Snapshot {
   const blocks: Block[] = Array.from({ length: 6 }, (_, i) => ({
     id: uid(1001 + i),
@@ -218,6 +264,8 @@ export function seed(now = Date.now()): Snapshot {
       start_date: dayOffset(0, now),
       end_date: dayOffset(14, now),
       staying: true,
+      period_id: uid(700001),
+      response: "entire" as const,
     }));
   return {
     students,
@@ -225,6 +273,7 @@ export function seed(now = Date.now()): Snapshot {
     events: events.sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
     alerts,
     holidays,
+    holiday_periods: demoPeriods(now),
   };
 }
 type DemoPayload = {

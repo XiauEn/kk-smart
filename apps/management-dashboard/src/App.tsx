@@ -1,3 +1,5 @@
+import StudentDetail from "./StudentDetail";
+import HolidayPlanning from "./HolidayPlanning";
 import {
   Badge,
   Brand,
@@ -39,7 +41,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -120,6 +122,24 @@ function Management() {
     [edit, setEdit] = useState<Student | null>(null),
     [saving, setSaving] = useState(false),
     [message, setMessage] = useState("");
+  const [detailId, setDetailId] = useState("");
+  const [trend, setTrend] = useState<"day" | "week" | "month">("day");
+  useEffect(() => {
+    const read = () => {
+      const m = location.hash.match(/^#student\/([0-9a-f-]+)$/i);
+      setDetailId(m?.[1] ?? "");
+      if (m) setPage("records");
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  const detail = s.data.students.find((st) => st.id === detailId);
+  function openDetail(id: string) {
+    window.scrollTo({ top: 0 });
+    setDetailId(id);
+    location.hash = "student/" + id;
+  }
   const a = useMemo(() => analytics(s.data, filters), [s.data, filters]);
   const activeAlerts = s.data.alerts.filter(
     (x) => x.status !== "resolved",
@@ -148,7 +168,10 @@ function Management() {
     URL.revokeObjectURL(url);
   }
   function navigate(id: string) {
+    window.scrollTo({ top: 0 });
     setPage(id);
+    setDetailId("");
+    history.replaceState(null, "", location.pathname + location.search);
     setMobile(false);
     setMessage("");
   }
@@ -325,105 +348,114 @@ function Management() {
                 Export aggregate data
               </button>
             </div>
-            <div className="filter-bar panel">
-              <div className="filter-title">
-                <SlidersHorizontal size={16} />
-                Filters
-              </div>
-              <select
-                aria-label="Filter college"
-                value={filters.kk}
-                onChange={(e) => {
-                  setFilters({ ...filters, kk: e.target.value, block: "" });
-                  setRecordPage(0);
-                }}
-              >
-                <option value="">All residential colleges</option>
-                {[...new Set(s.data.blocks.map((b) => b.kk_name))].map((k) => (
-                  <option key={k}>{k}</option>
-                ))}
-              </select>
-              <select
-                aria-label="Filter block"
-                value={filters.block}
-                onChange={(e) => {
-                  setFilters({ ...filters, block: e.target.value });
-                  setRecordPage(0);
-                }}
-              >
-                <option value="">All blocks</option>
-                {s.data.blocks
-                  .filter((b) => !filters.kk || b.kk_name === filters.kk)
-                  .map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {blockLabel(s.data.blocks, b.id)}
-                    </option>
-                  ))}
-              </select>
-              <label className="date-filter">
-                <CalendarDays size={14} />
-                <input
-                  aria-label="Start date"
-                  type="date"
-                  value={filters.from}
-                  max={filters.to}
-                  min={dayOffset(-59)}
-                  onChange={(e) =>
-                    e.target.value &&
-                    setFilters({ ...filters, from: e.target.value })
-                  }
-                />
-                <span>—</span>
-                <input
-                  aria-label="End date"
-                  type="date"
-                  value={filters.to}
-                  min={filters.from}
-                  max={dayOffset(0)}
-                  onChange={(e) =>
-                    e.target.value &&
-                    setFilters({ ...filters, to: e.target.value })
-                  }
-                />
-              </label>
-              <select
-                aria-label="Date range preset"
-                value={
-                  Math.round(
-                    (Date.parse(filters.to) - Date.parse(filters.from)) /
-                      86400000,
-                  ) + 1
-                }
-                onChange={(e) =>
-                  setFilters({
-                    ...filters,
-                    from: dayOffset(1 - Number(e.target.value)),
-                    to: dayOffset(0),
-                  })
-                }
-              >
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={60}>Last 60 days</option>
-                {![7, 30, 60].includes(
-                  Math.round(
-                    (Date.parse(filters.to) - Date.parse(filters.from)) /
-                      86400000,
-                  ) + 1,
-                ) && (
-                  <option
-                    value={
-                      Math.round(
-                        (Date.parse(filters.to) - Date.parse(filters.from)) /
-                          86400000,
-                      ) + 1
-                    }
-                  >
-                    Custom range
-                  </option>
+            {!detail && (
+              <div className="filter-bar panel">
+                <div className="filter-title">
+                  <SlidersHorizontal size={16} />
+                  Filters
+                </div>
+                <select
+                  aria-label="Filter college"
+                  value={filters.kk}
+                  onChange={(e) => {
+                    setFilters({ ...filters, kk: e.target.value, block: "" });
+                    setRecordPage(0);
+                  }}
+                >
+                  <option value="">All residential colleges</option>
+                  {[...new Set(s.data.blocks.map((b) => b.kk_name))].map(
+                    (k) => (
+                      <option key={k}>{k}</option>
+                    ),
+                  )}
+                </select>
+                <select
+                  aria-label="Filter block"
+                  value={filters.block}
+                  onChange={(e) => {
+                    setFilters({ ...filters, block: e.target.value });
+                    setRecordPage(0);
+                  }}
+                >
+                  <option value="">All blocks</option>
+                  {s.data.blocks
+                    .filter((b) => !filters.kk || b.kk_name === filters.kk)
+                    .map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {blockLabel(s.data.blocks, b.id)}
+                      </option>
+                    ))}
+                </select>
+                {page !== "holiday" && page !== "records" && (
+                  <>
+                    <label className="date-filter">
+                      <CalendarDays size={14} />
+                      <input
+                        aria-label="Start date"
+                        type="date"
+                        value={filters.from}
+                        max={filters.to}
+                        min={dayOffset(-59)}
+                        onChange={(e) =>
+                          e.target.value &&
+                          setFilters({ ...filters, from: e.target.value })
+                        }
+                      />
+                      <span>—</span>
+                      <input
+                        aria-label="End date"
+                        type="date"
+                        value={filters.to}
+                        min={filters.from}
+                        max={dayOffset(0)}
+                        onChange={(e) =>
+                          e.target.value &&
+                          setFilters({ ...filters, to: e.target.value })
+                        }
+                      />
+                    </label>
+                    <select
+                      aria-label="Date range preset"
+                      value={
+                        Math.round(
+                          (Date.parse(filters.to) - Date.parse(filters.from)) /
+                            86400000,
+                        ) + 1
+                      }
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          from: dayOffset(1 - Number(e.target.value)),
+                          to: dayOffset(0),
+                        })
+                      }
+                    >
+                      <option value={7}>Last 7 days</option>
+                      <option value={30}>Last 30 days</option>
+                      <option value={60}>Last 60 days</option>
+                      {![7, 30, 60].includes(
+                        Math.round(
+                          (Date.parse(filters.to) - Date.parse(filters.from)) /
+                            86400000,
+                        ) + 1,
+                      ) && (
+                        <option
+                          value={
+                            Math.round(
+                              (Date.parse(filters.to) -
+                                Date.parse(filters.from)) /
+                                86400000,
+                            ) + 1
+                          }
+                        >
+                          Custom range
+                        </option>
+                      )}
+                    </select>
+                  </>
                 )}
-              </select>
-            </div>
+              </div>
+            )}
             <ErrorNotice />
             {message && (
               <div className="notice" role="status">
@@ -445,6 +477,11 @@ function Management() {
             )}
             {page === "overview" && (
               <>
+                <p className="section-explainer">
+                  What needs attention? {a.blocks.length} blocks · {a.unique}{" "}
+                  different entrants · {a.events.length.toLocaleString()} total
+                  attempts in the selected period.
+                </p>
                 <div className="metric-grid">
                   <Metric
                     label="Registered residents"
@@ -452,47 +489,28 @@ function Management() {
                     icon={<Users size={18} />}
                     detail="Active permissions in selected blocks"
                   />
-                  <Metric
-                    label="Residential blocks"
-                    value={a.blocks.length}
-                    icon={<Building2 size={18} />}
-                    detail="Within selected college & block"
-                  />
-                  <Metric
-                    label="Unique resident entrants"
-                    value={a.unique}
-                    icon={<DoorOpen size={18} />}
-                    detail="At least one successful entry"
-                  />
-                  <Metric
-                    label="Total access attempts"
-                    value={a.events.length.toLocaleString()}
-                    icon={<Activity size={18} />}
-                  />
+
                   <Metric
                     label="Successful entries"
+                    detail="Granted entry events, including repeat entries"
                     value={a.granted.length.toLocaleString()}
                     icon={<Check size={18} />}
                   />
                   <Metric
-                    label="Denied entries"
+                    label="Denied attempts"
+                    detail="Rejected scans; not necessarily intruders"
                     value={(
                       a.events.length - a.granted.length
                     ).toLocaleString()}
                     icon={<ShieldAlert size={18} />}
                   />
                   <Metric
-                    label="Active security alerts"
+                    label="Alerts requiring review"
+                    detail="New or under-review alerts in selected dates"
                     value={
                       a.alerts.filter((x) => x.status !== "resolved").length
                     }
                     icon={<Bell size={18} />}
-                  />
-                  <Metric
-                    label="Holiday stay declarations"
-                    value={a.holidayCount}
-                    icon={<CalendarDays size={18} />}
-                    detail="Declarations overlapping selected dates"
                   />
                 </div>
                 <div className="charts-grid">
@@ -639,6 +657,18 @@ function Management() {
             )}
             {page === "activity" && (
               <>
+                <label className="trend-control">
+                  Entry trend grouping
+                  <select
+                    aria-label="Entry trend grouping"
+                    value={trend}
+                    onChange={(e) => setTrend(e.target.value as typeof trend)}
+                  >
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                  </select>
+                </label>
                 <div className="notice">
                   <Info size={18} />
                   Recorded entry events describe activity, not occupancy, nights
@@ -663,10 +693,31 @@ function Management() {
                 </div>
                 <div className="charts-grid equal">
                   <ChartPanel
-                    title="Successful entry events by day"
+                    title="Entry activity trend"
                     subtitle="Selected date range"
                   >
-                    {activityChart}
+                    {trend === "day" ? (
+                      activityChart
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={trend === "week" ? a.weekly : a.monthly}
+                        >
+                          <CartesianGrid
+                            vertical={false}
+                            strokeDasharray="3 5"
+                          />
+                          <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                          <YAxis allowDecimals={false} />
+                          <Tooltip />
+                          <Bar
+                            dataKey="value"
+                            name="Successful entries"
+                            fill="#158d7d"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </ChartPanel>
                   <ChartPanel
                     title="Daily unique entrants"
@@ -710,148 +761,19 @@ function Management() {
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartPanel>
-                  <ChartPanel
-                    title="Weekly activity trends"
-                    subtitle="Successful entries · weeks starting Monday"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={a.weekly} margin={{ left: -25 }}>
-                        <CartesianGrid vertical={false} strokeDasharray="3 5" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Bar
-                          dataKey="value"
-                          name="Successful entries"
-                          fill="#4288ac"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartPanel>
                 </div>
                 <div className="panel table-panel">
                   <div className="panel-heading">
-                    <h2>Monthly trends & block comparison</h2>
+                    <h2>Block comparison</h2>
                     <span className="fine">
                       Partial months reflect selected dates
                     </span>
                   </div>
-                  <div className="inline-stats">
-                    {a.monthly.map((m) => (
-                      <div key={m.label}>
-                        <span>{m.label}</span>
-                        <strong>{m.value.toLocaleString()} entries</strong>
-                      </div>
-                    ))}
-                  </div>
                   <BlockTable rows={a.comparison} />
                 </div>
               </>
             )}
-            {page === "holiday" && (
-              <>
-                <div className="notice">
-                  <Info size={18} />
-                  Declarations help plan support. Recent unique entrants cannot
-                  establish how many people are physically inside.
-                </div>
-                <div className="metric-grid three">
-                  <Metric
-                    label="Registered residents"
-                    value={a.residents.length}
-                    icon={<Users size={18} />}
-                  />
-                  <Metric
-                    label="Declared holiday stays"
-                    value={a.holidayCount}
-                    icon={<CalendarDays size={18} />}
-                  />
-                  <Metric
-                    label="Recent unique entrants"
-                    value={a.unique}
-                    icon={<DoorOpen size={18} />}
-                    detail="During selected date range"
-                  />
-                </div>
-                <div className="charts-grid equal">
-                  <ChartPanel
-                    title="Holiday support by block"
-                    subtitle="Declared stays alongside registered residents"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={a.comparison} margin={{ left: -25 }}>
-                        <CartesianGrid vertical={false} strokeDasharray="3 5" />
-                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar
-                          dataKey="residents"
-                          name="Registered residents"
-                          fill="#dce8e5"
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="stays"
-                          name="Declared holiday stays"
-                          fill="#138d7b"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartPanel>
-                  <section className="panel holiday-information">
-                    <CalendarDays size={30} />
-                    <div className="eyebrow">DEMO HOLIDAY PERIOD</div>
-                    <h2>Semester break</h2>
-                    <p>
-                      {dayOffset(0)} — {dayOffset(14)}
-                    </p>
-                    <div className="notice">
-                      Review patrol coverage, emergency contacts, and support
-                      arrangements across quieter blocks.
-                    </div>
-                    <p className="fine">
-                      Fictional students can declare or withdraw their stay in
-                      the Student Portal. In Local Demo Mode, use the standalone
-                      control below.
-                    </p>
-                    {!s.connected && (
-                      <button
-                        className="button"
-                        onClick={async () => {
-                          const st = s.data.students[0];
-                          const old = s.data.holidays.find(
-                            (h) => h.student_id === st.id,
-                          );
-                          await s.declare({
-                            id: crypto.randomUUID(),
-                            student_id: st.id,
-                            holiday_name: "Semester break",
-                            start_date: dayOffset(0),
-                            end_date: dayOffset(14),
-                            staying: !old?.staying,
-                          });
-                          setMessage(
-                            "Alex Tan’s local holiday declaration updated.",
-                          );
-                        }}
-                      >
-                        Toggle Alex’s demo declaration
-                      </button>
-                    )}
-                  </section>
-                </div>
-                <section className="panel table-panel">
-                  <div className="panel-heading">
-                    <h2>Block-level safety planning</h2>
-                    <Badge>Aggregate data</Badge>
-                  </div>
-                  <BlockTable rows={a.comparison} />
-                </section>
-              </>
-            )}
+            {page === "holiday" && <HolidayPlanning filters={filters} />}
             {page === "security" && (
               <>
                 <div className="panel table-panel">
@@ -993,139 +915,156 @@ function Management() {
                 )}
               </>
             )}
-            {page === "records" && (
-              <>
-                <div className="notice">
-                  <ShieldCheck size={18} />
-                  Permission changes affect subsequent verification.{" "}
-                  {s.connected
-                    ? "Updates are validated and audited on the server."
-                    : "Local edits affect this app only; use the permission test below to demonstrate."}
-                </div>
-                <section className="panel table-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Fictional residential records</h2>
-                      <p>{records.length} students · Demo Data</p>
+            {page === "records" && detail ? (
+              <StudentDetail
+                key={detail.id}
+                student={detail}
+                onBack={() => navigate("records")}
+                onEdit={() => setEdit({ ...detail })}
+              />
+            ) : (
+              page === "records" && (
+                <>
+                  <div className="notice">
+                    <ShieldCheck size={18} />
+                    Permission changes affect subsequent verification.{" "}
+                    {s.connected
+                      ? "Updates are validated and audited on the server."
+                      : "Local edits affect this app only; use the permission test below to demonstrate."}
+                  </div>
+                  <section className="panel table-panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>Fictional residential records</h2>
+                        <p>{records.length} students · Demo Data</p>
+                      </div>
+                      <div className="search-field">
+                        <Search size={16} />
+                        <input
+                          aria-label="Search residents"
+                          placeholder="Search name or student ID"
+                          value={query}
+                          onChange={(e) => {
+                            setQuery(e.target.value);
+                            setRecordPage(0);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="search-field">
-                      <Search size={16} />
-                      <input
-                        aria-label="Search residents"
-                        placeholder="Search name or student ID"
-                        value={query}
-                        onChange={(e) => {
-                          setQuery(e.target.value);
-                          setRecordPage(0);
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Year</th>
+                            <th>Residential block</th>
+                            <th>Room</th>
+                            <th>Permission</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {records
+                            .slice(recordPage * 12, recordPage * 12 + 12)
+                            .map((st) => (
+                              <tr key={st.id}>
+                                <td>
+                                  <div className="table-person">
+                                    <span className="table-avatar">
+                                      {st.name
+                                        .split(" ")
+                                        .slice(0, 2)
+                                        .map((n) => n[0])
+                                        .join("")}
+                                    </span>
+                                    <strong>{st.name}</strong>
+                                  </div>
+                                </td>
+                                <td className="mono">{st.student_id}</td>
+                                <td>Year {st.year_of_study}</td>
+                                <td>
+                                  {blockLabel(s.data.blocks, st.block_id)}
+                                </td>
+                                <td>{st.room_number ?? "—"}</td>
+                                <td>
+                                  <Badge tone={statusTone(st.status)}>
+                                    {st.status === "none"
+                                      ? "No permission"
+                                      : st.status}
+                                  </Badge>
+                                </td>
+                                <td>
+                                  <button
+                                    className="text-button"
+                                    onClick={() => openDetail(st.id)}
+                                  >
+                                    View details <ArrowRight size={13} />
+                                  </button>
+                                  <button
+                                    className="text-button"
+                                    onClick={() => setEdit({ ...st })}
+                                  >
+                                    Edit permission
+                                    <ArrowUpRight size={13} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="table-pagination">
+                      <span>
+                        Showing {Math.min(recordPage * 12 + 1, records.length)}–
+                        {Math.min(recordPage * 12 + 12, records.length)} of{" "}
+                        {records.length}
+                      </span>
+                      <div>
+                        <button
+                          className="button small"
+                          disabled={recordPage === 0}
+                          onClick={() => setRecordPage(recordPage - 1)}
+                        >
+                          Previous
+                        </button>
+                        <button
+                          className="button small"
+                          disabled={(recordPage + 1) * 12 >= records.length}
+                          onClick={() => setRecordPage(recordPage + 1)}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                  {!s.connected && (
+                    <div className="panel demo-dashboard">
+                      <div>
+                        <strong>
+                          Test Alex’s updated permission at KK3 Block A
+                        </strong>
+                        <p>
+                          Run this after activating, expiring, or moving Alex to
+                          another block.
+                        </p>
+                      </div>
+                      <button
+                        className="button"
+                        onClick={async () => {
+                          const r = await s.scenario(0, s.data.blocks[0].id);
+                          setMessage(
+                            `${r.granted ? "ACCESS GRANTED" : "ACCESS DENIED"} · ${r.reason}`,
+                          );
                         }}
-                      />
-                    </div>
-                  </div>
-                  <div className="table-scroll">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Student</th>
-                          <th>Student ID</th>
-                          <th>Year</th>
-                          <th>Residential block</th>
-                          <th>Room</th>
-                          <th>Permission</th>
-                          <th />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {records
-                          .slice(recordPage * 12, recordPage * 12 + 12)
-                          .map((st) => (
-                            <tr key={st.id}>
-                              <td>
-                                <div className="table-person">
-                                  <span className="table-avatar">
-                                    {st.name
-                                      .split(" ")
-                                      .slice(0, 2)
-                                      .map((n) => n[0])
-                                      .join("")}
-                                  </span>
-                                  <strong>{st.name}</strong>
-                                </div>
-                              </td>
-                              <td className="mono">{st.student_id}</td>
-                              <td>Year {st.year_of_study}</td>
-                              <td>{blockLabel(s.data.blocks, st.block_id)}</td>
-                              <td>{st.room_number ?? "—"}</td>
-                              <td>
-                                <Badge tone={statusTone(st.status)}>
-                                  {st.status === "none"
-                                    ? "No permission"
-                                    : st.status}
-                                </Badge>
-                              </td>
-                              <td>
-                                <button
-                                  className="text-button"
-                                  onClick={() => setEdit({ ...st })}
-                                >
-                                  Manage
-                                  <ArrowUpRight size={13} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="table-pagination">
-                    <span>
-                      Showing {Math.min(recordPage * 12 + 1, records.length)}–
-                      {Math.min(recordPage * 12 + 12, records.length)} of{" "}
-                      {records.length}
-                    </span>
-                    <div>
-                      <button
-                        className="button small"
-                        disabled={recordPage === 0}
-                        onClick={() => setRecordPage(recordPage - 1)}
                       >
-                        Previous
-                      </button>
-                      <button
-                        className="button small"
-                        disabled={(recordPage + 1) * 12 >= records.length}
-                        onClick={() => setRecordPage(recordPage + 1)}
-                      >
-                        Next
+                        Test permission
+                        <ArrowRight size={15} />
                       </button>
                     </div>
-                  </div>
-                </section>
-                {!s.connected && (
-                  <div className="panel demo-dashboard">
-                    <div>
-                      <strong>
-                        Test Alex’s updated permission at KK3 Block A
-                      </strong>
-                      <p>
-                        Run this after activating, expiring, or moving Alex to
-                        another block.
-                      </p>
-                    </div>
-                    <button
-                      className="button"
-                      onClick={async () => {
-                        const r = await s.scenario(0, s.data.blocks[0].id);
-                        setMessage(
-                          `${r.granted ? "ACCESS GRANTED" : "ACCESS DENIED"} · ${r.reason}`,
-                        );
-                      }}
-                    >
-                      Test permission
-                      <ArrowRight size={15} />
-                    </button>
-                  </div>
-                )}
-              </>
+                  )}
+                </>
+              )
             )}
             <footer className="dashboard-footer">
               <span>

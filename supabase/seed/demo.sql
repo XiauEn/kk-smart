@@ -21,9 +21,9 @@ from generate_series(0,59) d cross join generate_series(0,199) i
 join public.students s on s.id=('00000000-0000-4000-8000-'||lpad((i+1)::text,12,'0'))::uuid join public.residencies r on r.student_id=s.id
 cross join lateral (select (((now() at time zone 'Asia/Kuala_Lumpur')::date-d)::timestamp+make_interval(hours=>8+(i*7+d)%15,mins=>(i*11+d)%60)) at time zone 'Asia/Kuala_Lumpur' as ts) t
 where (i*13+d*7)%31<=(i%5)*5+2 and t.ts<=now() on conflict do nothing;
-insert into public.holiday_declarations(student_id,holiday_name,start_date,end_date,staying)
-select s.id,'Semester break',(now() at time zone 'Asia/Kuala_Lumpur')::date,(now() at time zone 'Asia/Kuala_Lumpur')::date+14,true from public.students s join public.residencies r on r.student_id=s.id
-where r.status='active' and (((right(s.student_id,3)::int-1)*7+(right(s.student_id,3)::int-1)/6)%10)<2+(right(s.student_id,3)::int-1)%6 on conflict do nothing;
+insert into public.holiday_declarations(student_id,holiday_name,period_id,start_date,end_date,staying,response)
+select s.id,p.name,p.id,p.start_date,p.end_date,true,'entire' from public.students s join public.residencies r on r.student_id=s.id cross join public.holiday_periods p
+where p.name='Semester break' and r.status='active' and (((right(s.student_id,3)::int-1)*7+(right(s.student_id,3)::int-1)/6)%10)<2+(right(s.student_id,3)::int-1)%6 on conflict do nothing;
 insert into public.security_alerts(id,block_id,timestamp,alert_type,status,description) values
 ('00000000-0000-4000-8000-000000900001','00000000-0000-4000-8000-000000001002',now()-interval '2 hours','five_failures','new','Demo Data: five denied attempts; human review required.'),
 ('00000000-0000-4000-8000-000000900002','00000000-0000-4000-8000-000000001001',now()-interval '1 day','five_failures','resolved','Demo Data: event reviewed by residential security.') on conflict do nothing;

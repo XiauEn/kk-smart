@@ -25,3 +25,19 @@ The deployed dashboard's holiday charts and residential records loaded. Expiring
 29 automated tests pass. Final build status and GitHub CI can be checked in the repository. Future main-branch pushes deploy each independently configured Vercel project.
 
 Demo login emails: `alex@kk-smart.example`, `sarah@kk-smart.example`, `daniel@kk-smart.example`, `emily@kk-smart.example`, `gate-a@kk-smart.example`, and `management@kk-smart.example`. The shared fictional demo password is the `DEMO_PASSWORD` value in the private ignored `.env.operator.local` file. Open that local file; do not paste it into GitHub or public documents.
+
+## Management update — 23 October 2026
+
+- Overview now has four primary cards: registered residents, successful entries, denied attempts, and alerts requiring review. The context line contains total attempts, distinct entrants and block count. Denied attempts do not establish intrusion.
+- Residential Activity uses Day / Week / Month grouping instead of separate repeated trend charts. No exit, occupancy or nights-stayed calculations were added.
+- Holiday Planning lets management publish a fictional holiday name, start/end dates and declaration deadline. Student choices are entire period, selected inclusive dates, not staying/withdraw, and unsure. Management selects the holiday and can inspect declared stays for a particular date. Holiday metrics use the selected holiday and the college/block filters, independently of the activity date range.
+- Residential Records → View details opens a shareable student fragment URL, profile, holiday declarations, and entry attempts. Individual history is loaded on demand, paginated at 50 records, supports MYT date filters or all available dates, and requires a management role. Connected history requests are audited. No exits are recorded.
+- Applied migration `20261022161910_holiday_periods_and_student_history.sql` and deployed kk-api version 2. Existing declarations were retained. All five migrations must run before the SQL seed.
+- 32 automated tests passed; all three builds passed. Connected browser testing saved Alex's selected dates (25–28 October), published Mid-semester break · Demo, and loaded his individual history. Realtime API rehearsal passed after a transient upstream timeout. Test cleanup now signs out only its own sessions.
+
+### Demo walkthrough
+
+1. Student Portal → Holiday stay declaration: select a named holiday, review dates/deadline, choose a plan, then Save declaration.
+2. Management → Holiday planning: choose the same holiday. Review declared stays, nonresponses and a specific planning day. These are plans, not physical presence.
+3. Management → Residential records: search DEMO001, choose View details. Use From/Until or All dates, then Refresh entry history after a new scan.
+4. A fresh Alex QR still grants entry at Block A. Expired/reused QR codes and unauthorised residential permissions are denied as before.

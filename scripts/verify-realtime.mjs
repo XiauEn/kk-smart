@@ -92,5 +92,5 @@ try {
   console.log("PASS: temporary provisioning endpoint is retired (HTTP 410).");
 } finally {
   if (channel) await clients[0]?.removeChannel(channel);
-  await Promise.all(clients.map((c) => c.auth.signOut()));
+  await Promise.all(clients.map((c) => c.auth.signOut({ scope: "local" })));
 }

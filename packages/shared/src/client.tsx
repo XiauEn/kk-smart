@@ -15,6 +15,10 @@ import {
   type Credential,
   type Decision,
   type Holiday,
+  type HolidayPeriod,
+  type EntryHistory,
+  validateDeclaration,
+  demoPeriods,
   type Snapshot,
   type Student,
 } from "./model";
@@ -48,6 +52,13 @@ type Store = {
   updateStudent: (s: Student) => Promise<void>;
   updateAlert: (id: string, status: Alert["status"]) => Promise<void>;
   declare: (h: Holiday) => Promise<void>;
+  saveHolidayPeriod: (p: HolidayPeriod) => Promise<void>;
+  entryHistory: (
+    id: string,
+    from: string,
+    to: string,
+    offset: number,
+  ) => Promise<EntryHistory>;
   setOffline: (v: boolean) => void;
   sync: () => Promise<void>;
   reset: () => void;
@@ -71,7 +82,7 @@ export async function api(
   });
   if (error)
     throw Error(
-      "Server request failed. Check your connection, account role, and function deployment.",
+      `Server request failed${error.context?.status ? ` (HTTP ${error.context.status})` : ""}. Check your connection, account role, and function deployment.`,
     );
   if (data.error) throw Error(data.error);
   return data;
@@ -87,7 +98,12 @@ export function KKProvider({
   const load = (): Snapshot => {
     if (connected) return empty;
     try {
-      return JSON.parse(localStorage.getItem(storageKey) ?? "null") ?? seed();
+      const saved = JSON.parse(
+        localStorage.getItem(storageKey) ?? "null",
+      ) as Snapshot | null;
+      return saved
+        ? { ...saved, holiday_periods: saved.holiday_periods ?? demoPeriods() }
+        : seed();
     } catch {
       return seed();
     }
@@ -198,12 +214,15 @@ export function KKProvider({
       },
       () => void refresh(),
     );
-    if (role === "management")
-      for (const table of [
-        "security_alerts",
-        "residencies",
-        "holiday_declarations",
-      ])
+    if (role === "management" || role === "student")
+      for (const table of role === "management"
+        ? [
+            "security_alerts",
+            "residencies",
+            "holiday_declarations",
+            "holiday_periods",
+          ]
+        : ["holiday_declarations", "holiday_periods"])
         ch.on(
           "postgres_changes",
           { event: "*", schema: "public", table },
@@ -283,6 +302,11 @@ export function KKProvider({
       });
   }
   async function declare(h: Holiday) {
+    const period = state.current.holiday_periods?.find(
+      (p) => p.id === h.period_id,
+    );
+    if (!period) throw Error("Select a published holiday period.");
+    validateDeclaration(h, period);
     if (connected) {
       if (!online) throw Error("Reconnect to save your declaration.");
       await api("declare", { declaration: h });
@@ -295,7 +319,8 @@ export function KKProvider({
             (x) =>
               !(
                 x.student_id === h.student_id &&
-                x.holiday_name === h.holiday_name
+                (x.period_id === h.period_id ||
+                  x.holiday_name === h.holiday_name)
               ),
           ),
           h,
@@ -333,6 +358,45 @@ export function KKProvider({
     updateStudent,
     updateAlert,
     declare,
+    saveHolidayPeriod: async (p) => {
+      if (connected) {
+        if (!online) throw Error("Reconnect to publish a holiday.");
+        await api("holiday_period", { period: p });
+        await refresh();
+      } else {
+        if (
+          !p.name.trim() ||
+          p.end_date < p.start_date ||
+          p.declaration_deadline > p.end_date
+        )
+          throw Error("Check holiday name, dates and deadline.");
+        save({
+          ...state.current,
+          holiday_periods: [...(state.current.holiday_periods ?? []), p],
+        });
+      }
+    },
+    entryHistory: async (id, from, to, offset) => {
+      if (connected) {
+        if (!online) throw Error("Reconnect to load individual entry history.");
+        return api("student_history", {
+          student_id: id,
+          from: from || null,
+          to: to || null,
+          offset,
+        });
+      }
+      const events = state.current.events.filter(
+        (e) =>
+          e.student_id === id &&
+          (!from || e.timestamp.slice(0, 10) >= from) &&
+          (!to || e.timestamp.slice(0, 10) <= to),
+      );
+      return {
+        events: events.slice(offset, offset + 50),
+        total: events.length,
+      };
+    },
     setOffline: (v) => {
       setOffline(v);
       if (v) setStale(true);
@@ -360,7 +424,9 @@ export function KKProvider({
       if (error) throw error;
     },
     signOut: () => {
-      void supabase?.auth.signOut();
+      currentActor.current = null;
+      setSession(null);
+      void supabase?.auth.signOut({ scope: "local" });
       save(empty);
     },
   };

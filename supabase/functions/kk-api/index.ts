@@ -77,6 +77,12 @@ Deno.serve(async (req: Request) => {
       case "declare":
         await rpc("kk_declare", { p_declaration: body.declaration });
         break;
+      case "holiday_period":
+        await rpc("kk_holiday_period", {p_period: body.period});
+        break;
+      case "student_history":
+        result = await rpc("kk_student_history", {p_student:body.student_id, p_from:body.from ?? null, p_to:body.to ?? null, p_offset:body.offset ?? 0});
+        break;
       case "demo_verify": {
         const { data: databaseDemoEnabled } = await admin.rpc(
           "kk_demo_controls_enabled",
