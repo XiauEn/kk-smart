@@ -162,11 +162,69 @@ describe("consistent aggregate analytics", () => {
       to: dayOffset(0, now),
     });
     expect(a.blocks.length).toBe(1);
+    expect(a.averageEntryDays).toBe(0);
+    expect(
+      a.residentActivity.every(
+        (row) => row.entryDays === 0 && row.entries === 0,
+      ),
+    ).toBe(true);
     expect(a.frequency[0].value).toBe(a.residents.length);
     expect(a.frequency.map((f) => f.label)).toEqual([
       "0 days",
       "1–5 days",
       "6–7 days",
     ]);
+  });
+  it("averages distinct MYT entry days across the full resident cohort, including zeros", () => {
+    const data = seed(now);
+    data.students = data.students
+      .slice(0, 2)
+      .map((s) => ({ ...s, block_id: uid(1001), status: "active" }));
+    const base = {
+      id: "one",
+      student_id: data.students[0].id,
+      block_id: uid(1001),
+      granted: true,
+      denial_reason: null,
+      verification_method: "test",
+    };
+    data.events = [
+      { ...base, timestamp: "2026-10-01T15:59:00Z" },
+      { ...base, id: "two", timestamp: "2026-10-01T16:01:00Z" },
+      { ...base, id: "repeat", timestamp: "2026-10-02T01:00:00Z" },
+      {
+        ...base,
+        id: "denied",
+        student_id: data.students[1].id,
+        granted: false,
+        timestamp: "2026-10-02T03:00:00Z",
+      },
+      {
+        ...base,
+        id: "wrong-block",
+        student_id: data.students[1].id,
+        block_id: uid(1002),
+        timestamp: "2026-10-02T03:00:00Z",
+      },
+    ];
+    const f = {
+      kk: "KK3",
+      block: uid(1001),
+      from: "2026-10-01",
+      to: "2026-10-02",
+    };
+    const a = analytics(data, f);
+    expect(a.residentActivity.map((r) => [r.entryDays, r.entries])).toEqual([
+      [2, 3],
+      [0, 0],
+    ]);
+    expect(a.averageEntryDays).toBe(1);
+    expect(
+      analytics(data, { ...f, from: "2026-10-02" }).residentActivity[0]
+        .entryDays,
+    ).toBe(1);
+    expect(analytics(data, { ...f, block: uid(1003) }).averageEntryDays).toBe(
+      0,
+    );
   });
 });

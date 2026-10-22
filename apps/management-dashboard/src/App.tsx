@@ -1,4 +1,5 @@
 import StudentDetail from "./StudentDetail";
+import RecordedEntryTable from "./RecordedEntryTable";
 import HolidayPlanning from "./HolidayPlanning";
 import {
   Badge,
@@ -674,6 +675,16 @@ function Management() {
                   Recorded entry events describe activity, not occupancy, nights
                   stayed, or accommodation eligibility.
                 </div>
+                <RecordedEntryTable
+                  key={`${filters.kk}-${filters.block}-${filters.from}-${filters.to}`}
+                  data={a}
+                  blocks={s.data.blocks}
+                  filters={filters}
+                  onDetails={(id) => {
+                    setPage("records");
+                    openDetail(id);
+                  }}
+                />
                 <div className="metric-grid three">
                   <Metric
                     label="Successful entry events"

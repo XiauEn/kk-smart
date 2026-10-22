@@ -41,3 +41,11 @@ Demo login emails: `alex@kk-smart.example`, `sarah@kk-smart.example`, `daniel@kk
 2. Management → Holiday planning: choose the same holiday. Review declared stays, nonresponses and a specific planning day. These are plans, not physical presence.
 3. Management → Residential records: search DEMO001, choose View details. Use From/Until or All dates, then Refresh entry history after a new scan.
 4. A fresh Alex QR still grants entry at Block A. Expired/reused QR codes and unauthorised residential permissions are denied as before.
+
+## Recorded entry activity table — 23 October 2026
+
+Residential activity now includes a sortable, paginated resident table using the existing college, block and inclusive date filters. Columns are student, student ID, assigned block, distinct recorded entry days and successful entry events. Click headings to toggle ascending/descending order. The default is recorded entry days descending, with student ID as a stable tie breaker.
+
+The average equals the sum of recorded entry days divided by all currently active residents in the selected blocks, including those with zero entries. Only successful entry events at selected blocks within the selected MYT dates contribute. Current assignments define the cohort; historical assignments can differ. This does not measure actual days/nights stayed, occupancy or residential eligibility.
+
+33 automated tests passed, including MYT midnight boundaries, repeated same-day entries, denied/wrong-block exclusion, zero-entry residents and empty cohorts. No database migration or Edge Function change is needed for this release.

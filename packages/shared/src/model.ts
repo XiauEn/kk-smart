@@ -436,6 +436,20 @@ export function analytics(data: Snapshot, f: Filters) {
     [26, 30],
     [31, Math.max(31, days.length)],
   ];
+  const entryCounts = new Map<string, number>();
+  granted.forEach((e) => {
+    if (e.student_id)
+      entryCounts.set(e.student_id, (entryCounts.get(e.student_id) ?? 0) + 1);
+  });
+  const residentActivity = residents.map((student) => ({
+    student,
+    entryDays: daySets.get(student.id)?.size ?? 0,
+    entries: entryCounts.get(student.id) ?? 0,
+  }));
+  const averageEntryDays = residents.length
+    ? residentActivity.reduce((sum, row) => sum + row.entryDays, 0) /
+      residents.length
+    : 0;
   const frequency = ranges
     .filter(([low]) => low <= days.length)
     .map(([low, high]) => ({
@@ -502,6 +516,8 @@ export function analytics(data: Snapshot, f: Filters) {
     unique,
     days,
     frequency,
+    residentActivity,
+    averageEntryDays,
     comparison,
     alerts,
     holidayCount: new Set(holidays.map((h) => h.student_id)).size,
