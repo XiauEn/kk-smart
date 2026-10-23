@@ -29,6 +29,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { GateAudio, type GateSound } from "./audio";
 type GateState =
   | "CLOSED"
   | "VERIFYING"
@@ -48,6 +49,7 @@ function GateScanner() {
     [cameraError, setCameraError] = useState(""),
     [manual, setManual] = useState(""),
     [muted, setMuted] = useState(false),
+    [soundReady, setSoundReady] = useState(false),
     [offline, setOffline] = useState(false),
     [message, setMessage] = useState("");
   const video = useRef<HTMLVideoElement>(null),
@@ -55,7 +57,7 @@ function GateScanner() {
     busy = useRef(false),
     timers = useRef<ReturnType<typeof setTimeout>[]>([]),
     last = useRef({ token: "", time: 0 }),
-    audio = useRef<AudioContext | null>(null),
+    audio = useRef<GateAudio | null>(null),
     mounted = useRef(true);
   const configuredBlock =
     s.connected && s.online ? (s.data.terminal_block_id ?? block) : block;
@@ -68,31 +70,18 @@ function GateScanner() {
       clearInterval(id);
       timers.current.forEach(clearTimeout);
       controls.current?.stop();
-      void audio.current?.close();
+      audio.current?.dispose();
+      audio.current = null;
     };
   }, []);
-  function sound(alarm: boolean) {
-    if (muted) return;
-    try {
-      audio.current ??= new AudioContext();
-      void audio.current.resume();
-      const ctx = audio.current;
-      for (let i = 0; i < (alarm ? 6 : 2); i++) {
-        const osc = ctx.createOscillator(),
-          gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = alarm ? (i % 2 ? 660 : 880) : i ? 880 : 660;
-        gain.gain.value = 0.07;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const start = ctx.currentTime + i * 0.18;
-        osc.start(start);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.16);
-        osc.stop(start + 0.17);
-      }
-    } catch {
-      /* Sound availability does not affect authorisation. */
-    }
+  function enableSound() {
+    audio.current ??= new GateAudio();
+    void audio.current.unlock().then((ready) => {
+      if (mounted.current) setSoundReady(ready);
+    });
+  }
+  function sound(kind: GateSound) {
+    audio.current?.play(kind);
   }
   function later(fn: () => void, ms: number) {
     timers.current.push(
@@ -103,6 +92,7 @@ function GateScanner() {
   }
   async function perform(task: () => Promise<Decision>) {
     if (busy.current) return;
+    enableSound();
     busy.current = true;
     timers.current.forEach(clearTimeout);
     setStatus("VERIFYING");
@@ -117,14 +107,14 @@ function GateScanner() {
       setResult(r);
       if (r.alert) {
         setStatus("SECURITY ALERT");
-        sound(true);
+        sound("alarm");
         later(() => {
           setStatus("CLOSED");
           busy.current = false;
         }, 7000);
       } else if (r.granted) {
         setStatus("ACCESS GRANTED");
-        sound(false);
+        sound("success");
         later(() => setStatus("OPENING"), 400);
         later(() => setStatus("OPEN"), 1200);
         later(() => setStatus("CLOSING"), 3300);
@@ -134,6 +124,7 @@ function GateScanner() {
         }, 4200);
       } else {
         setStatus("ACCESS DENIED");
+        sound("denied");
         later(() => {
           setStatus("CLOSED");
           busy.current = false;
@@ -142,6 +133,7 @@ function GateScanner() {
       if (s.connected && s.online) void s.refresh();
     } catch {
       setStatus("ACCESS DENIED");
+      sound("denied");
       setMessage(
         "Verification unavailable. Entry remains closed. Retry or contact residential security.",
       );
@@ -160,6 +152,7 @@ function GateScanner() {
   }
   scanRef.current = (token) => void scanToken(token);
   async function startCamera() {
+    enableSound();
     setCameraError("");
     setCamera(true);
     try {
@@ -190,6 +183,7 @@ function GateScanner() {
   }
   async function fiveFailures() {
     if (busy.current) return;
+    enableSound();
     busy.current = true;
     setResult(null);
     setStatus("VERIFYING");
@@ -199,6 +193,8 @@ function GateScanner() {
       let alertCreated = false;
       for (let i = 0; i < 5; i++) {
         r = await s.scenario(4, configuredBlock);
+        if (r.alert && !alertCreated) sound("alarm");
+        else if (!alertCreated) sound("denied");
         alertCreated ||= Boolean(r.alert);
         await new Promise((resolve) => setTimeout(resolve, 220));
       }
@@ -210,11 +206,11 @@ function GateScanner() {
             ? "Five denied attempts submitted. Security alert created for human review."
             : "Five attempts denied. An alert was recently created for this gate; duplicate alerts are suppressed for two minutes.",
         );
-        if (alertCreated) sound(true);
       }
       if (s.connected && s.online) void s.refresh();
     } catch {
       setStatus("ACCESS DENIED");
+      sound("denied");
       setMessage(
         "Demo requests failed. Check connection and server demo-control setting.",
       );
@@ -241,11 +237,21 @@ function GateScanner() {
             {s.online ? "Terminal online" : "Offline simulation"}
           </Badge>
           <button
-            className="icon-button"
-            aria-label={muted ? "Enable sound" : "Mute sound"}
-            onClick={() => setMuted(!muted)}
+            className="button secondary"
+            aria-label={muted || !soundReady ? "Enable sound" : "Mute sound"}
+            onClick={() => {
+              if (muted || !soundReady) {
+                setMuted(false);
+                audio.current?.setMuted(false);
+                enableSound();
+              } else {
+                setMuted(true);
+                audio.current?.setMuted(true);
+              }
+            }}
           >
             {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            {muted || !soundReady ? "Enable sound" : "Sound on"}
           </button>
           <SessionButton />
         </div>
@@ -442,6 +448,39 @@ function GateScanner() {
                 <ArrowRight size={14} />
               </button>
             </div>
+            <details>
+              <summary>
+                Test sounds <Volume2 size={14} />
+              </summary>
+              <p className="fine">
+                Preview only · no access events or security alerts are created.
+              </p>
+              <div className="demo-button-grid">
+                {(["success", "denied", "alarm"] as const).map((kind) => (
+                  <button
+                    key={kind}
+                    className="button"
+                    disabled={status !== "CLOSED"}
+                    onClick={() => {
+                      setMuted(false);
+                      audio.current ??= new GateAudio();
+                      audio.current.setMuted(false);
+                      void audio.current.unlock().then((ready) => {
+                        if (!mounted.current) return;
+                        setSoundReady(ready);
+                        if (ready) sound(kind);
+                      });
+                    }}
+                  >
+                    {kind === "success"
+                      ? "Success ding"
+                      : kind === "denied"
+                        ? "Denied beep"
+                        : "Alarm siren"}
+                  </button>
+                ))}
+              </div>
+            </details>
             <details>
               <summary>
                 Manual QR input & terminal settings
