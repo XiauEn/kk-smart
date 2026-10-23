@@ -473,7 +473,7 @@ function GateScanner() {
                     }}
                   >
                     {kind === "success"
-                      ? "Success ding"
+                      ? "Ding + welcome to KK67"
                       : kind === "denied"
                         ? "Denied beep"
                         : "Alarm siren"}

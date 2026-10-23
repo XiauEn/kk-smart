@@ -41,9 +41,45 @@ class FakeAudioContext {
 }
 afterEach(() => {
   oscillators.length = 0;
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 describe("gate audio lifecycle", () => {
+  it("plays a distinct sound on a single denial", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const audio = new GateAudio();
+    await audio.unlock();
+    audio.play("denied");
+    expect(oscillators.length).toBeGreaterThan(0);
+    audio.dispose();
+  });
+  it("speaks the welcome after the ding and cancels pending speech on mute", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const speak = vi.fn(),
+      cancel = vi.fn();
+    vi.stubGlobal("speechSynthesis", { speak, cancel });
+    vi.stubGlobal(
+      "SpeechSynthesisUtterance",
+      class {
+        constructor(public text: string) {}
+      },
+    );
+    const audio = new GateAudio();
+    await audio.unlock();
+    audio.play("success");
+    expect(speak).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(850);
+    expect(speak).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Welcome to KK67" }),
+    );
+    audio.play("success");
+    audio.setMuted(true);
+    vi.advanceTimersByTime(1000);
+    expect(speak).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalled();
+    audio.dispose();
+  });
   it("requires activation before playing", async () => {
     vi.stubGlobal("AudioContext", FakeAudioContext);
     const audio = new GateAudio();

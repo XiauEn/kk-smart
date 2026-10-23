@@ -5,6 +5,7 @@ export class GateAudio {
   private context: AudioContext | null = null;
   private active = new Set<OscillatorNode>();
   private muted = false;
+  private welcomeTimer: ReturnType<typeof setTimeout> | undefined;
 
   async unlock(): Promise<boolean> {
     if (this.muted) return false;
@@ -23,6 +24,9 @@ export class GateAudio {
   }
 
   private stop() {
+    clearTimeout(this.welcomeTimer);
+    this.welcomeTimer = undefined;
+    if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
     this.active.forEach((osc) => osc.stop());
     this.active.clear();
   }
@@ -62,9 +66,24 @@ export class GateAudio {
     if (kind === "success") {
       tone(880, 0, 0.55, 0.16);
       tone(1320, 0.12, 0.65, 0.1);
+      this.welcomeTimer = setTimeout(() => {
+        this.welcomeTimer = undefined;
+        if (
+          this.muted ||
+          typeof speechSynthesis === "undefined" ||
+          typeof SpeechSynthesisUtterance === "undefined"
+        )
+          return;
+        const welcome = new SpeechSynthesisUtterance("Welcome to KK67");
+        welcome.lang = "en-GB";
+        welcome.rate = 0.95;
+        welcome.volume = 1;
+        speechSynthesis.speak(welcome);
+      }, 850);
     } else if (kind === "denied") {
-      tone(220, 0, 0.16, 0.12, "triangle");
-      tone(185, 0.22, 0.22, 0.12, "triangle");
+      // Mid-range square tones remain clear on small laptop/tablet speakers.
+      tone(520, 0, 0.28, 0.2, "square");
+      tone(390, 0.36, 0.32, 0.2, "square");
     } else {
       // Smooth rising/falling "ouuu" siren, five seconds long.
       const osc = tone(420, 0, 5, 0.2, "triangle");
