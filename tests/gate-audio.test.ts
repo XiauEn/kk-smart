@@ -71,7 +71,7 @@ describe("gate audio lifecycle", () => {
     expect(speak).not.toHaveBeenCalled();
     vi.advanceTimersByTime(850);
     expect(speak).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Welcome to KK67" }),
+      expect.objectContaining({ text: "Welcome to K K six seven" }),
     );
     audio.play("success");
     audio.setMuted(true);

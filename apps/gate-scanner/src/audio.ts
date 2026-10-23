@@ -74,7 +74,7 @@ export class GateAudio {
           typeof SpeechSynthesisUtterance === "undefined"
         )
           return;
-        const welcome = new SpeechSynthesisUtterance("Welcome to KK67");
+        const welcome = new SpeechSynthesisUtterance("Welcome to K K six seven");
         welcome.lang = "en-GB";
         welcome.rate = 0.95;
         welcome.volume = 1;
